@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import TemplatesPanel from "./panels/TemplatesPanel";
 import SectionsPanel from "./panels/SectionsPanel";
 import StylesPanel from "./panels/StylesPanel";
 import AIToolsPanel from "./panels/AIToolsPanel";
 import SettingsPanel from "./panels/SettingsPanel";
 export default function ResumeWorkSpace() {
+    const { selectedResume } = useResumeBuilder();
     const [activeTab, setActiveTab] = useState<string>("templates");
     const tabs = [
         { id: "templates", label: "Templates", icon: "📄" },
@@ -21,7 +23,7 @@ export default function ResumeWorkSpace() {
             case "sections":
                 return <SectionsPanel />;
             case "styles":
-                return <StylesPanel />;
+                return <StylesPanel key={selectedResume?.id ?? "blank-draft"} />;
             case "ai-tools":
                 return <AIToolsPanel />;
             case "settings":

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import { FiSave, FiRefreshCw } from "react-icons/fi";
 interface ColorScheme {
     id: string;
@@ -15,6 +16,7 @@ interface FontOption {
     className: string;
 }
 export default function StylesPanel() {
+    const { style, setStyle } = useResumeBuilder();
     const [selectedColor, setSelectedColor] = useState<string>("modern");
     const [selectedFont, setSelectedFont] = useState<string>("inter");
     const [spacing, setSpacing] = useState<number>(16);
@@ -77,11 +79,28 @@ export default function StylesPanel() {
 
     const currentColor = colorSchemes.find((c) => c.id === selectedColor)!;
 
+
+    const applyStyles = () => setStyle((previous) => ({
+        ...previous,
+        global: {
+            ...previous.global,
+            "--resume-primary": currentColor.primary,
+            "--resume-secondary": currentColor.secondary,
+            "--resume-accent": currentColor.accent,
+            backgroundColor: currentColor.background,
+            color: currentColor.text,
+            fontSize,
+            lineHeight: `${spacing}px`,
+        },
+    }));
+
+    const resetStyles = () => setStyle({ global: {}, selectors: {}, elements: {}, customCSS: "" });
+
     return (
         <div className="space-y-6">
             {/* Color Schemes */}
             <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Color Schemes</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Color Schemes {Object.keys(style.global ?? {}).length > 0 && <span className="ml-2 text-xs font-normal text-blue-600">Template style loaded</span>}</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {colorSchemes.map((scheme) => (
                         <button
@@ -219,11 +238,11 @@ export default function StylesPanel() {
             {/* Action Buttons */}
             <div className="bg-white rounded-xl shadow-lg p-6">
                 <div className="flex gap-4 justify-end">
-                    <button className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+                    <button onClick={resetStyles} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center gap-2 cursor-pointer">
                         <FiRefreshCw className="w-4 h-4" />
                         Reset to Default
                     </button>
-                    <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 cursor-pointer">
+                    <button onClick={applyStyles} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 cursor-pointer">
                         <FiSave className="w-4 h-4" />
                         Apply Styles
                     </button>
