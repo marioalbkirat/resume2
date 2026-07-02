@@ -1,320 +1,76 @@
-// D:\cvBuilder\resumebuilder\src\hooks\Canava\jsonToHtml\NodeRenderer.tsx
 "use client";
+
 import { ICON_MAP } from "@/hooks/PickIcons/icons";
-import { Schema } from "@/types/resume/Schema";
 import { Content } from "@/types/resume/Content";
+import { Schema } from "@/types/resume/Section";
 import Image from "next/image";
-import { FiPlus, FiTrash2, FiEdit2 } from "react-icons/fi";
-import { useState } from "react";
-import Swal from "sweetalert2";
+import { ElementType } from "react";
+import { FiTrash2 } from "react-icons/fi";
 
 type NodeRendererProps = {
-    node: Schema;
-    sectionId: string;
-    content?: Record<string, Content>;
-    isEditable?: boolean;
-    onUpdate?: (nodeId: string, value: string, props?: Record<string, string>) => void;
-    onAddNode?: (parentId: string) => void;
-    onDeleteNode?: (nodeId: string) => void;
-    onSelectNode?: (nodeId: string) => void;
-    isSelected?: boolean;
-    level?: number;
-    showActions?: boolean;
+  node: Schema;
+  sectionId: string;
+  content?: Record<string, Content>;
+  isEditable?: boolean;
+  selectedNodeId?: string | null;
+  showIcons?: boolean;
+  direction?: "LTR" | "RTL";
+  onUpdate?: (nodeId: string, value: string, props?: Record<string, string>) => void;
+  onDeleteListItem?: (nodeId: string) => void;
+  onSelectNode?: (nodeId: string) => void;
 };
 
-export default function NodeRenderer({
-    node,
-    sectionId,
-    content,
-    isEditable = true,
-    onUpdate,
-    onAddNode,
-    onDeleteNode,
-    onSelectNode,
-    isSelected = false,
-    level = 0,
-    showActions = false
-}: NodeRendererProps) {
-    const nodeContent = content?.[node.id] || null;
-    const Tag = node.tag as keyof JSX.IntrinsicElements;
-    const hasChildren = node.children && node.children.length > 0;
-    const isListContainer = node.tag === 'ul' || node.tag === 'ol';
-    const isListItem = node.tag === 'li';
+const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
+const contentKeyFor = (node: Schema) => (node as Schema & { value?: string }).value || node.id;
 
-    // ✅ العناصر التي لها قيمة
-    const hasValue = !['section', 'div', 'ul', 'ol', 'li'].includes(node.tag);
-    const isInlineElement = ['i', 'span', 'a', 'img'].includes(node.tag);
-    
-    const hasListChild = node.children?.some(child => child.tag === 'ul' || child.tag === 'ol') || false;
+export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode }: NodeRendererProps) {
+  if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
 
-    const handleClick = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (isEditable && onSelectNode) {
-            onSelectNode(node.id);
-        }
-    };
+  const key = contentKeyFor(node);
+  const nodeContent = content[key];
+  const hasText = !TEXTLESS_TAGS.has(node.tag);
+  const isSelected = selectedNodeId === node.id;
+  const Tag = node.tag as ElementType;
 
-    const handleAddChild = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (onAddNode) {
-            onAddNode(node.id);
-        }
-    };
+  const common = {
+    dir: direction.toLowerCase(),
+    "data-node-id": node.id,
+    "data-section-id": sectionId,
+    onClick: (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); if (isEditable) onSelectNode?.(node.id); },
+    className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isEditable ? "cursor-pointer" : ""}`,
+  };
 
-    const handleDelete = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        e.preventDefault();
-        if (onDeleteNode) {
-            onDeleteNode(node.id);
-        }
-    };
+  const children = node.children?.map((child) => (
+    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} direction={direction} onUpdate={onUpdate} onDeleteListItem={onDeleteListItem} onSelectNode={onSelectNode} />
+  ));
 
-    const handleIconChange = async () => {
-        if (!isEditable || !onUpdate) return;
+  if (node.tag === "i") {
+    const iconName = nodeContent?.value || "FaUser";
+    const Icon = ICON_MAP[iconName as keyof typeof ICON_MAP];
+    return <span {...common} className={`inline-flex align-middle ${common.className}`}>{Icon ? <Icon aria-hidden /> : null}</span>;
+  }
 
-        try {
-            const result = await Swal.fire({
-                title: 'Select Icon',
-                input: 'text',
-                inputValue: nodeContent?.value || node.value || 'FaUser',
-                showCancelButton: true,
-                confirmButtonText: 'Update',
-                inputPlaceholder: 'e.g., FaUser, FaGithub, FaLinkedin',
-                inputLabel: 'Enter icon name from Font Awesome:'
-            });
-            
-            if (result.isConfirmed && result.value) {
-                onUpdate(node.id, result.value);
-            }
-        } catch (error) {
-            console.error('Error changing icon:', error);
-        }
-    };
+  if (node.tag === "img") {
+    return <span {...common} className={`inline-block ${common.className}`}><Image src={nodeContent?.value || "/placeholder.png"} alt={node.name} width={100} height={100} /></span>;
+  }
 
-    const handleValueChange = (e: React.FocusEvent<HTMLElement>) => {
-        if (onUpdate && hasValue) {
-            const newValue = e.currentTarget.textContent || '';
-            onUpdate(node.id, newValue);
-        }
-    };
+  if (node.tag === "li") {
+    return (
+      <li {...common} className={`relative pe-7 ${common.className}`}>
+        <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent?.value ?? ""}</span>
+        {children}
+        {isEditable && <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteListItem?.(node.id); }} className="absolute end-0 top-0 rounded p-1 text-red-500 hover:bg-red-50" title="Delete item"><FiTrash2 size={14} /></button>}
+      </li>
+    );
+  }
 
-    const renderActions = () => {
-        if (!isEditable) return null;
-        
-        const shouldShow = showActions || isListContainer || hasListChild;
-        if (!shouldShow) return null;
+  if (hasText) {
+    return (
+      <Tag {...common} contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} style={{ outline: "none" }}>
+        {nodeContent?.value ?? ""}
+      </Tag>
+    );
+  }
 
-        const actionButtons = [];
-
-        if (isListContainer || hasListChild) {
-            actionButtons.push(
-                <button
-                    key="add"
-                    onClick={handleAddChild}
-                    className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 rounded transition-all"
-                    title="Add item"
-                    type="button"
-                >
-                    <FiPlus size={14} />
-                </button>
-            );
-        }
-
-        if (node.tag !== 'section') {
-            actionButtons.push(
-                <button
-                    key="delete"
-                    onClick={handleDelete}
-                    className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-all"
-                    title="Delete item"
-                    type="button"
-                >
-                    <FiTrash2 size={14} />
-                </button>
-            );
-        }
-
-        if (node.tag === 'i' && isEditable) {
-            actionButtons.push(
-                <button
-                    key="edit-icon"
-                    onClick={handleIconChange}
-                    className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded transition-all"
-                    title="Change icon"
-                    type="button"
-                >
-                    <FiEdit2 size={14} />
-                </button>
-            );
-        }
-
-        if (actionButtons.length === 0) return null;
-
-        return (
-            <span className="action-buttons inline-flex items-center gap-1 bg-white rounded-lg shadow-sm border border-gray-200 px-1 py-0.5 ml-2">
-                {actionButtons}
-            </span>
-        );
-    };
-
-    // ✅ عرض الأيقونات
-    if (node.tag === 'i') {
-        const iconName = nodeContent?.value || node.value || 'FaUser';
-        const IconComponent = ICON_MAP[iconName as keyof typeof ICON_MAP];
-        return (
-            <span
-                className={`inline-block relative ${isSelected ? 'ring-2 ring-blue-500 rounded p-1' : ''}`}
-                onClick={handleClick}
-                style={{ cursor: isEditable ? 'pointer' : 'default' }}
-            >
-                {IconComponent ? <IconComponent /> : <span>🔹</span>}
-                {renderActions()}
-            </span>
-        );
-    }
-
-    // ✅ عرض الصور
-    if (node.tag === 'img') {
-        return (
-            <span
-                className={`relative inline-block ${isSelected ? 'ring-2 ring-blue-500 rounded' : ''}`}
-                onClick={handleClick}
-            >
-                <Image
-                    src={nodeContent?.value || node.value || '/placeholder.png'}
-                    alt={node.name}
-                    width={100}
-                    height={100}
-                    style={{ objectFit: 'contain' }}
-                />
-                {renderActions()}
-            </span>
-        );
-    }
-
-    // ✅ عرض الأطفال
-    const renderChildren = () => {
-        if (!hasChildren) return null;
-        return node.children.map((child) => (
-            <NodeRenderer
-                key={child.id}
-                node={child}
-                sectionId={sectionId}
-                content={content}
-                isEditable={isEditable}
-                onUpdate={onUpdate}
-                onAddNode={onAddNode}
-                onDeleteNode={onDeleteNode}
-                onSelectNode={onSelectNode}
-                isSelected={isSelected}
-                level={level + 1}
-                showActions={showActions || isListContainer || hasListChild}
-            />
-        ));
-    };
-
-    // ✅ عرض العقدة
-    const renderNode = () => {
-        // ✅ عناصر القائمة
-        if (isListItem) {
-            return (
-                <li
-                    className={`relative pl-4 ${isSelected ? 'ring-2 ring-blue-500 rounded' : ''}`}
-                    onClick={handleClick}
-                    style={{ cursor: isEditable ? 'pointer' : 'default', position: 'relative' }}
-                >
-                    <span className="absolute left-0">•</span>
-                    {/* ✅ عرض القيمة فقط إذا كانت موجودة */}
-                    {hasValue && nodeContent?.value && (
-                        <span
-                            contentEditable={isEditable}
-                            suppressContentEditableWarning
-                            onBlur={handleValueChange}
-                            className="outline-none"
-                        >
-                            {nodeContent.value}
-                        </span>
-                    )}
-                    {renderChildren()}
-                    {renderActions()}
-                </li>
-            );
-        }
-
-        // ✅ الحاويات (sections, divs)
-        if (['section', 'div'].includes(node.tag)) {
-            return (
-                <Tag
-                    className={`relative ${isSelected ? 'ring-2 ring-blue-500 rounded' : ''}`}
-                    onClick={handleClick}
-                    style={{ cursor: isEditable ? 'pointer' : 'default', position: 'relative' }}
-                >
-                    {renderChildren()}
-                    {renderActions()}
-                </Tag>
-            );
-        }
-
-        // ✅ القوائم (ul, ol)
-        if (['ul', 'ol'].includes(node.tag)) {
-            return (
-                <Tag
-                    className={`relative ${isSelected ? 'ring-2 ring-blue-500 rounded' : ''}`}
-                    onClick={handleClick}
-                    style={{ cursor: isEditable ? 'pointer' : 'default', position: 'relative' }}
-                >
-                    {renderChildren()}
-                    {renderActions()}
-                </Tag>
-            );
-        }
-
-        // ✅ العناصر المضمنة (span, a)
-        if (isInlineElement) {
-            const TagElement = Tag;
-            return (
-                <TagElement
-                    className={`relative inline-block ${isSelected ? 'ring-2 ring-blue-500 rounded' : ''}`}
-                    onClick={handleClick}
-                    contentEditable={isEditable && hasValue}
-                    suppressContentEditableWarning
-                    onBlur={handleValueChange}
-                    style={{ 
-                        cursor: isEditable ? 'pointer' : 'default', 
-                        position: 'relative', 
-                        outline: 'none',
-                        display: 'inline-block'
-                    }}
-                >
-                    {/* ✅ عرض القيمة فقط إذا كانت موجودة */}
-                    {hasValue ? nodeContent?.value || '' : renderChildren()}
-                    {renderActions()}
-                </TagElement>
-            );
-        }
-
-        // ✅ العناصر العادية (p, h1, h2, etc.)
-        const TagElement = Tag;
-        return (
-            <TagElement
-                className={`relative ${isSelected ? 'ring-2 ring-blue-500 rounded' : ''}`}
-                onClick={handleClick}
-                contentEditable={isEditable && hasValue}
-                suppressContentEditableWarning
-                onBlur={handleValueChange}
-                style={{ 
-                    cursor: isEditable ? 'pointer' : 'default', 
-                    position: 'relative', 
-                    outline: 'none' 
-                }}
-            >
-                {/* ✅ عرض القيمة فقط إذا كانت موجودة */}
-                {hasValue ? nodeContent?.value || '' : renderChildren()}
-                {renderActions()}
-            </TagElement>
-        );
-    };
-
-    return renderNode();
+  return <Tag {...common}>{children}</Tag>;
 }

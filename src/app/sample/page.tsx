@@ -27,6 +27,10 @@ function ResumeBuilderContent() {
         updateSettings({ columns });
     };
 
+    const handleShowIcons = (showIcons: boolean) => {
+        updateSettings({ showIcons });
+    };
+
     const handleSidebarPosition = (position: "LEFT" | "RIGHT") => {
         updateSettings({ sidebar: { position } });
     };
@@ -58,8 +62,16 @@ function ResumeBuilderContent() {
         updateDistributionItem(otherId, { order: currentOrderValue });
     };
 
-    const handleSectionPosition = (sectionId: string, position: "left" | "right" | "FULL") => {
-        updateDistributionItem(sectionId, { position });
+    const handleSectionPosition = (sectionId: string, position: "left" | "right") => {
+        if (settings.columns === "TWO") updateDistributionItem(sectionId, { position });
+    };
+
+    const handleSectionVisible = (sectionId: string, visible: boolean) => {
+        updateDistributionItem(sectionId, { visible });
+    };
+
+    const handleSectionIcon = (sectionId: string, showIcon: boolean) => {
+        updateDistributionItem(sectionId, { showIcon });
     };
 
     if (isLoading) {
@@ -138,7 +150,7 @@ function ResumeBuilderContent() {
                 <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
                     <div className="max-w-7xl mx-auto">
                         <h3 className="text-sm font-semibold text-gray-700 mb-3">⚙️ Page Settings</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                             <div>
                                 <label className="text-xs text-gray-500 block mb-1">Columns</label>
                                 <div className="flex gap-2">
@@ -164,6 +176,7 @@ function ResumeBuilderContent() {
                                     </button>
                                 </div>
                             </div>
+                            {settings.columns === "TWO" && (
                             <div>
                                 <label className="text-xs text-gray-500 block mb-1">Sidebar Position</label>
                                 <div className="flex gap-2">
@@ -189,6 +202,7 @@ function ResumeBuilderContent() {
                                     </button>
                                 </div>
                             </div>
+                            )}
                             <div>
                                 <label className="text-xs text-gray-500 block mb-1">Direction</label>
                                 <div className="flex gap-2">
@@ -213,6 +227,20 @@ function ResumeBuilderContent() {
                                         RTL
                                     </button>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs text-gray-500 block mb-1">Icons</label>
+                                <button
+                                    onClick={() => handleShowIcons(!settings.showIcons)}
+                                    className={`px-3 py-1.5 rounded-lg text-sm ${
+                                        settings.showIcons 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {settings.showIcons ? 'Shown' : 'Hidden'}
+                                </button>
                             </div>
                             <div>
                                 <label className="text-xs text-gray-500 block mb-1">Page Size</label>
@@ -278,15 +306,24 @@ function ResumeBuilderContent() {
                                                     ↓
                                                 </button>
                                             </div>
-                                            <select
-                                                value={config.position || "FULL"}
-                                                onChange={(e) => handleSectionPosition(sectionId, e.target.value as "left" | "right" | "FULL")}
-                                                className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white"
-                                            >
-                                                <option value="FULL">Full</option>
-                                                <option value="left">Left</option>
-                                                <option value="right">Right</option>
-                                            </select>
+                                            <label className="flex items-center gap-1 text-xs text-gray-600">
+                                                <input type="checkbox" checked={config.visible} onChange={(e) => handleSectionVisible(sectionId, e.target.checked)} />
+                                                Visible
+                                            </label>
+                                            <label className="flex items-center gap-1 text-xs text-gray-600">
+                                                <input type="checkbox" checked={config.showIcon} onChange={(e) => handleSectionIcon(sectionId, e.target.checked)} />
+                                                Icon
+                                            </label>
+                                            {settings.columns === "TWO" && (
+                                                <select
+                                                    value={config.position === "right" ? "right" : "left"}
+                                                    onChange={(e) => handleSectionPosition(sectionId, e.target.value as "left" | "right")}
+                                                    className="text-xs border border-gray-300 rounded px-1 py-0.5 bg-white"
+                                                >
+                                                    <option value="left">Left</option>
+                                                    <option value="right">Right</option>
+                                                </select>
+                                            )}
                                         </div>
                                     );
                                 })}
