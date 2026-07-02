@@ -1,0 +1,220 @@
+@import "tailwindcss";
+
+/* Add to your global.css or component CSS module */
+.tree-node-enter {
+    opacity: 0;
+    transform: translateX(-10px);
+}
+
+.tree-node-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 200ms, transform 200ms;
+}
+
+/* Custom scrollbar for long trees */
+.tree-container {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.tree-container::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.tree-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.tree-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.tree-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/* Add to your global.css */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* SweetAlert custom styling */
+.swal2-popup {
+    font-family: inherit;
+}
+
+.type-card {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.type-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Focus styles */
+input:focus, select:focus {
+    outline: none;
+}
+
+/* Smooth transitions */
+.swal2-container {
+    backdrop-filter: blur(4px);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* styles/globals.css */
+.selected-node {
+  outline: 2px solid #3b82f6 !important;
+  outline-offset: 2px;
+  position: relative;
+  transition: outline 0.2s ease;
+}
+
+.selected-node::after {
+  content: '✏️';
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  font-size: 12px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* styles/globals.css */
+
+/* Smooth transitions for toolbar */
+.style-toolbar-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.style-toolbar-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 200ms ease;
+}
+
+/* Color picker enhancement */
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border-radius: 4px;
+    border: 1px solid #e5e7eb;
+}
+
+/* Tab active indicator */
+.tab-active {
+    position: relative;
+}
+
+.tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #3b82f6;
+    border-radius: 2px 2px 0 0;
+}
+
+/* Preset buttons hover effect */
+.preset-btn {
+    transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Selected node indicator in canvas */
+.build-node.selected-node {
+    outline: 2px solid #3b82f6 !important;
+    outline-offset: 2px;
+    position: relative;
+    animation: pulse-outline 2s ease-in-out infinite;
+}
+
+@keyframes pulse-outline {
+    0%, 100% {
+        outline-color: #3b82f6;
+    }
+    50% {
+        outline-color: #93c5fd;
+    }
+}
+
+.build-node.selected-node::after {
+    content: '✏️';
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    font-size: 14px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    pointer-events: none;
+    animation: bounce-badge 2s ease-in-out infinite;
+}
+
+@keyframes bounce-badge {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}

@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String             @id @default(cuid())
+  name              String             @db.VarChar(60)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  drafts            ResumeDraft[]
+  resumeTemplates   ResumeTemplate[]
+  sections          Section[]
+  templateLikes     TemplateLike[]
+  templateSaves     TemplateSave[]
+  templateDownloads TemplateDownload[]
+  templateForks     TemplateFork[]
+}
+
+model ResumeTemplate {
+  id                String             @id @default(cuid())
+  name              String
+  visibility        Visibility
+  previewImage      String
+  category          ResumeCategory     @default(REGULAR)
+  targetRoles       String[]
+  description       String             @db.VarChar(200)
+  settings          Json
+  distribution      Json
+  style             Json
+  content           Json
+  downloads         Int                @default(0)
+  likes             Int                @default(0)
+  views             Int                @default(0)
+  saves             Int                @default(0)
+  forks             Int                @default(0)
+  authorId          String
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  user              User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  drafts            ResumeDraft[]
+  templateLikes     TemplateLike[]
+  templateSaves     TemplateSave[]
+  templateDownloads TemplateDownload[]
+  templateForks     TemplateFork[]
+}
+
+model TemplateLike {
+  userId     String
+  templateId String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template   ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([userId, templateId])
+  @@index([templateId])
+}
+
+model TemplateSave {
+  userId     String
+  templateId String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template   ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([userId, templateId])
+  @@index([templateId])
+}
+
+model TemplateDownload {
+  userId     String
+  templateId String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template   ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([userId, templateId])
+  @@index([templateId])
+}
+
+model TemplateFork {
+  userId     String
+  templateId String
+  createdAt  DateTime       @default(now())
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template   ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@id([userId, templateId])
+  @@index([templateId])
+}
+
+model Section {
+  id         String        @id @default(cuid())
+  name       String
+  target     SectionTarget
+  visibility Visibility
+  authorId   String
+  schema     Json
+  isArchived Boolean       @default(false)
+  content    Json
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  user       User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@unique([authorId, name])
+}
+
+model ResumeDraft {
+  id                    String         @id @default(cuid())
+  userId                String
+  templateId            String
+  title                 String
+  content               Json
+  settings              Json
+  distribution          Json
+  style                 Json
+  isPinned              Boolean        @default(false)
+  isDownloaded          Boolean        @default(false)
+  isLinkedWithPortfolio Boolean        @default(false)
+  slug                  String?        @unique
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template              ResumeTemplate @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([templateId])
+}
+
+enum Visibility {
+  OFFICIAL
+  COMMUNITY
+  PRIVATE
+}
+
+enum SectionTarget {
+  RESUME
+  PORTFOLIO
+}
+
+enum ResumeCategory {
+  ATS
+  REGULAR
+}
