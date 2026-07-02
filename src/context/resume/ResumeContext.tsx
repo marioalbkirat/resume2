@@ -42,8 +42,10 @@ type ProviderProps = { children: ReactNode; };
 
 const defaultSettings: Settings = { fileName: "My_Resume", direction: "LTR", pageSize: "A4", showIcons: true, columns: "TWO", sidebar: { position: "LEFT" } };
 const defaultStyle: ResumeStyle = { global: {}, selectors: {}, elements: {}, customCSS: "" };
-const buildContentFromSections = (sections: Section[]) => sections.reduce<Record<string, Content>>((acc, section) => ({ ...acc, ...(section.content ?? {}) }), {});
 const normalizeDistribution = (distribution: Distribution, settings: Settings) => Object.fromEntries(Object.entries(distribution ?? {}).map(([id, item], index) => [id, { order: item?.order ?? index, position: settings.columns === "TWO" ? item?.position === "right" ? "right" : "left" : "FULL", visible: item?.visible ?? true, showIcon: item?.showIcon ?? true }])) as Distribution;
+const templateSettings = (template: ResumeTemplate) => template.settings as Settings;
+const templateDistribution = (template: ResumeTemplate, settings: Settings) => normalizeDistribution(template.distribution as Distribution, settings);
+const templateContent = (template: ResumeTemplate) => ({ ...(template.content ?? {}) }) as Record<string, Content>;
 
 export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [selectedResume, setSelectedResume] = useState<ResumeTemplate | null>(null);
@@ -60,14 +62,14 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
     const setSettings: Dispatch<SetStateAction<Settings>> = useCallback((value) => setSettingsState(prev => typeof value === "function" ? (value as (previous: Settings) => Settings)(prev) : value), []);
 
     const activateTemplate = useCallback((template: ResumeTemplate) => {
-        const nextSettings = (template.settings as Settings) ?? defaultSettings;
+        const nextSettings = templateSettings(template);
         setSelectedResume(template);
         setSettingsState(nextSettings);
-        setDistributionState(normalizeDistribution((template.distribution as Distribution) ?? {}, nextSettings));
+        setDistributionState(templateDistribution(template, nextSettings));
         setStyle((template.style as ResumeStyle) ?? defaultStyle);
-        setContent({ ...buildContentFromSections(sections), ...(template.content ?? {}) });
+        setContent(templateContent(template));
         setSelectedNodeId(null);
-    }, [sections]);
+    }, []);
 
     const startBlankDraft = useCallback((nextSettings: Settings, nextDistribution: Distribution) => {
         setSelectedResume(null); setSettingsState(nextSettings); setDistributionState(normalizeDistribution(nextDistribution, nextSettings)); setStyle(defaultStyle); setContent({}); setSelectedNodeId(null);
@@ -83,8 +85,12 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
                 setTemplates(data);
                 if (data[0]) {
                     const first = data[0];
-                    const nextSettings = (first.settings as Settings) ?? defaultSettings;
-                    setSelectedResume(first); setSettingsState(nextSettings); setDistributionState(normalizeDistribution((first.distribution as Distribution) ?? {}, nextSettings)); setStyle((first.style as ResumeStyle) ?? defaultStyle); setContent({ ...buildContentFromSections(loadedSections), ...(first.content ?? {}) });
+                    const nextSettings = templateSettings(first);
+                    setSelectedResume(first);
+                    setSettingsState(nextSettings);
+                    setDistributionState(templateDistribution(first, nextSettings));
+                    setStyle((first.style as ResumeStyle) ?? defaultStyle);
+                    setContent(templateContent(first));
                 }
             }
         };
