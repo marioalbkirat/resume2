@@ -1,11 +1,11 @@
 // D:\cvBuilder\resumebuilder\src\context\resume\sampleData.ts
-import { Section } from '@/types/resume/Section';
+import { Schema, Section } from '@/types/resume/Section';
 import { Settings } from '@/types/resume/Settings';
 import { Distribution } from '@/types/resume/Distribution';
 import { Content } from '@/types/resume/Content';
 
 // Helper function to create schema nodes
-const createSchema = (id: string, tag: string, type: string, name: string, children: any[] = [], value?: string) => ({
+const createSchema = (id: string, tag: string, type: string, name: string, children: Schema[] = [], value?: string): Schema => ({
     id,
     tag,
     type,
@@ -13,7 +13,7 @@ const createSchema = (id: string, tag: string, type: string, name: string, child
     selectorGroup: tag,
     children,
     value: value || ''
-});
+} as Schema);
 
 // Sample Content - All in English
 export const sampleContent: Record<string, Content> = {
@@ -275,7 +275,7 @@ export const sampleContent: Record<string, Content> = {
 };
 
 // Sample Sections
-export const sampleSections: Section[] = [
+export const sampleSections: Section[] = ([
     {
         id: 'section-header',
         name: 'Header',
@@ -394,7 +394,7 @@ export const sampleSections: Section[] = [
             ])
         ])
     }
-];
+] as unknown as Section[]);
 
 // Sample Settings
 export const sampleSettings: Settings = {
@@ -458,4 +458,9 @@ export const sampleDistribution: Distribution = {
         visible: true,
         showIcon: true
     }
+};
+export const sampleStyle = {
+    global: {},
+    selectors: {},
+    elements: {}
 };

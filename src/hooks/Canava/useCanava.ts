@@ -5,7 +5,6 @@ import { Settings } from '@/types/resume/Settings';
 import { ResumeStyle } from '@/types/resume/ResumeStyle';
 import { Distribution, DistributionItem } from '@/types/resume/Distribution';
 import { Content } from '@/types/resume/Content';
-import { Schema } from '@/types/resume/Schema';
 import { SectionSchema } from '@/classes/section/SectionSchema';
 import { SectionContent } from '@/classes/section/SectionContent';
 
@@ -250,11 +249,12 @@ export function useCanava({
         notifyUpdate({ content });
     }, [contentControl, findSection, schemaControl, content, notifyUpdate]);
 
-    const getContent = useCallback((sectionId: string, nodeId: string) => {
+    const getContent = useCallback((_sectionId: string, nodeId: string) => {
         return contentControl.getContent(content, nodeId);
     }, [content, contentControl]);
 
     const getAllContent = useCallback((sectionId: string) => {
+        void sectionId;
         return content;
     }, [content]);
 
@@ -270,17 +270,18 @@ export function useCanava({
     }, [distribution, notifyUpdate]);
 
     const updateDistributionItem = useCallback((sectionId: string, item: Partial<DistributionItem>) => {
+        const fallback: DistributionItem = { order: 0, position: settings.columns === "TWO" ? "left" : "FULL", visible: true, showIcon: true };
         setDistribution(prev => ({
             ...prev,
-            [sectionId]: { ...prev[sectionId], ...item }
+            [sectionId]: { ...(prev[sectionId] || fallback), ...item }
         }));
         notifyUpdate({
             distribution: {
                 ...distribution,
-                [sectionId]: { ...distribution[sectionId], ...item }
+                [sectionId]: { ...(distribution[sectionId] || fallback), ...item }
             }
         });
-    }, [distribution, notifyUpdate]);
+    }, [distribution, notifyUpdate, settings.columns]);
 
     // Style Management
     const updateStyle = useCallback((newStyle: Partial<ResumeStyle>) => {
