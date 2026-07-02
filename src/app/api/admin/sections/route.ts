@@ -13,7 +13,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { name, target, visibility, schema } = body;
+        const { name, target, visibility, schema, content, isArchived } = body;
         const authorId = "cmqtlhdub0000t9rselto3b16";
         if (!name || !target || !visibility || !schema) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         if (!['RESUME', 'PORTFOLIO'].includes(target)) {
@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
                 target,
                 visibility,
                 schema: schema || {},
+                content: content || {},
+                isArchived: isArchived ?? false,
                 authorId: authorId || null,
             },
         });
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(section, { status: 201 });
     } catch (error) {
         console.error('Error creating section:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'Internal Server Error' }, { status: 500 });
     }
 }
 

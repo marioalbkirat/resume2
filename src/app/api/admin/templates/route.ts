@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/lib/db';
-import { ResumeCategory } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,9 +12,11 @@ export async function POST(request: NextRequest) {
         const visibility = formData.get('visibility') as string;
         const description = formData.get('description') as string;
         const targetRoles = JSON.parse(formData.get('targetRoles') as string);
-        const engine = JSON.parse(formData.get('engine') as string);
-        const styles = JSON.parse(formData.get('styles') as string);
-        const category = formData.get('category') as ResumeCategory;
+        const settings = JSON.parse(formData.get('settings') as string);
+        const distribution = JSON.parse(formData.get('distribution') as string);
+        const style = JSON.parse(formData.get('style') as string);
+        const content = JSON.parse((formData.get('content') as string) || "{}");
+        const category = formData.get('category') as "ATS" | "REGULAR";
         const previewImage = formData.get('previewImage') as File | null;
 
         let previewImagePath = null;
@@ -27,7 +28,6 @@ export async function POST(request: NextRequest) {
 
             // Generate unique filename
             const timestamp = Date.now();
-            const extension = previewImage.name.split('.').pop();
             const filename = `${timestamp}-${previewImage.name}`;
             const filePath = path.join(uploadDir, filename);
 
@@ -42,13 +42,16 @@ export async function POST(request: NextRequest) {
         const template = await prisma.resumeTemplate.create({
             data: {
                 name,
-                visibility: visibility as any,
+                visibility: visibility as "OFFICIAL" | "COMMUNITY" | "PRIVATE",
                 description,
                 targetRoles,
-                engine,
-                styles,
+                settings,
+                distribution,
+                style,
+                content,
+                authorId: "cmqtlhdub0000t9rselto3b16",
                 previewImage: previewImagePath || '',
-                category: category as ResumeCategory,
+                category,
                 downloads: 0,
                 likes: 0,
                 views: 0,
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
     try {
         const templates = await prisma.resumeTemplate.findMany({
             orderBy: { createdAt: 'desc' },
@@ -76,8 +79,11 @@ export async function GET(request: NextRequest) {
                 visibility: true,
                 downloads: true,
                 likes: true,
-                engine: true,
-                styles: true,
+                settings: true,
+                distribution: true,
+                style: true,
+                content: true,
+                authorId: true,
                 views: true,
                 category: true,
                 createdAt: true

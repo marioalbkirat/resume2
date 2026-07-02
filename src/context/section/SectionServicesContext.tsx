@@ -5,7 +5,7 @@ import { SectionServices } from "@/classes/section/SectionServices";
 import { CreateSection } from "@/classes/section";
 type SectionServicesContextType = {
     getSections: () => Promise<Section[]>;
-    createSection: (sectionForm: CreateSection) => Promise<void>;
+    createSection: (sectionForm: CreateSection) => Promise<Section>;
     deleteSection: (id: string) => Promise<void>;
     getSectionById: (id: string) => Promise<Section>;
     updateSection: (id: string, section: CreateSection) => Promise<void>;
@@ -17,7 +17,7 @@ export function SectionServicesProvider({ children }: ProviderProps) {
     const getSections = async (): Promise<Section[]> => {
         return await services.getSections();
     };
-    const createSection = async (sectionForm: CreateSection): Promise<void> => {
+    const createSection = async (sectionForm: CreateSection): Promise<Section> => {
         return await services.createSection(sectionForm)
     };
     const deleteSection = async (id: string): Promise<void> => {

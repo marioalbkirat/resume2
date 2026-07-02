@@ -1,4 +1,3 @@
-import { Visibility } from "@prisma/client";
 import { FiStar, FiUsers } from "react-icons/fi";
 import { RiGitRepositoryPrivateFill } from "react-icons/ri";
 export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCategory, setActiveCategory, activeSource, setActiveSource, categories, getTemplatesBySource }: {
@@ -6,8 +5,8 @@ export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCateg
     setSearchTerm: (term: string) => void;
     activeCategory: string;
     setActiveCategory: (category: string) => void;
-    activeSource: Visibility;
-    setActiveSource: (source: Visibility) => void;
+    activeSource: "OFFICIAL" | "COMMUNITY" | "PRIVATE";
+    setActiveSource: (source: "OFFICIAL" | "COMMUNITY" | "PRIVATE") => void;
     categories: { id: string; label: string; icon: React.ReactNode; count: number }[];
     getTemplatesBySource: () => any[];
 }) {
