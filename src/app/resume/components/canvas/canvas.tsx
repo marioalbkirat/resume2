@@ -1,7 +1,15 @@
 "use client"
+import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import BuildLayout from "@/hooks/Canava/BuildLayout";
 export default function Canava() {
     const { selectedResume, layout, settings } = useResumeBuilder();
+
+
+
+    
+
+
+
     const sections = [
         {
             "id": "cmq9jk3e4000jt9gc9zn6tfpq",
@@ -80,31 +88,26 @@ export default function Canava() {
             "updatedAt": "2026-06-11T13:36:36.652Z"
         },
         {
-            "id": "cmq9ji67r000ht9gcig0gr5tg",
             "name": "Certifications",
             "target": "RESUME",
             "visibility": "OFFICIAL",
-            "authorId": "cmpyqq2340002t9f40gyhidc2",
             "schema": {
                 "id": "302849a7-d3df-476f-b83b-aad285ee955a",
                 "tag": "section",
                 "name": "Certifications",
                 "type": "section",
-                "value": "",
                 "children": [
                     {
                         "id": "1d81a8da-b05d-49f5-9730-f0b6818ee59a",
                         "tag": "h2",
                         "name": "Certifications_heading",
                         "type": "heading",
-                        "value": "Certifications",
                         "children": [
                             {
                                 "id": "9d6dc2ed-1059-48d4-b1ab-d2e33733c36a",
                                 "tag": 'i',
                                 "name": "Certifications_icon",
                                 "type": "icon",
-                                "value": "FaCertificate",
                                 "children": [],
                                 "selectorGroup": 'i'
                             }
@@ -116,21 +119,18 @@ export default function Canava() {
                         "tag": "ul",
                         "name": "list",
                         "type": "list",
-                        "value": "",
                         "children": [
                             {
                                 "id": "40519ea2-06b9-4ecf-9976-0097eb84c454",
                                 "tag": "li",
                                 "name": "list_item",
                                 "type": "listItem",
-                                "value": "",
                                 "children": [
                                     {
                                         "id": "e43cc1bb-27ab-4aae-a4d7-0757d2ff889a",
                                         "tag": "span",
                                         "name": "name",
                                         "type": "text",
-                                        "value": "UI/UX Design Certification",
                                         "children": [],
                                         "selectorGroup": "span"
                                     },
@@ -139,7 +139,6 @@ export default function Canava() {
                                         "tag": "span",
                                         "name": "issuer",
                                         "type": "text",
-                                        "value": "Interaction Design Foundation",
                                         "children": [],
                                         "selectorGroup": "span"
                                     },
@@ -148,7 +147,6 @@ export default function Canava() {
                                         "tag": "span",
                                         "name": "date",
                                         "type": "text",
-                                        "value": "2022",
                                         "children": [],
                                         "selectorGroup": "span"
                                     },
@@ -157,7 +155,6 @@ export default function Canava() {
                                         "tag": "a",
                                         "name": "link",
                                         "type": "link",
-                                        "value": "View Certificate",
                                         "children": [],
                                         "selectorGroup": "a"
                                     }
