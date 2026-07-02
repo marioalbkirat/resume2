@@ -1,5 +1,4 @@
 
-import { ResumeCategory, Visibility } from "@prisma/client";
 import { Draft } from "./Draft";
 import { UserDB } from "./User";
 import { TemplateDownloadDB } from "./TemplateDownload";
@@ -13,16 +12,16 @@ import { Content } from "./Content";
 export interface ResumeTemplateDB {
     id: string;
     name: string;
-    visibility: Visibility;
+    visibility: "OFFICIAL" | "COMMUNITY" | "PRIVATE";
     previewImage: string;
     targetRoles: string[];
     description: string;
-    category: ResumeCategory,
+    category: "ATS" | "REGULAR",
     settings: Settings;
     distribution: Distribution;
     style: ResumeStyle;
     downloads: number;
-    content: Content;
+    content: Record<string, Content>;
     likes: number;
     views: number;
     saves: number;

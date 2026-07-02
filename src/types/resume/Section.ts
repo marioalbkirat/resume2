@@ -1,8 +1,6 @@
-// import { SectionTarget, Visibility } from "@prisma/client";
-// import { UserDB } from "./User";
+// // import { UserDB } from "./User";
 // import { Content } from "./Content";
-// import { Prisma } from "@prisma/client";
-// export interface Schema extends Prisma.JsonObject {
+// // export interface Schema {
 //     id: string;
 //     name: string;
 //     type: string;
@@ -17,7 +15,7 @@
 //     visibility: Visibility;
 //     authorId: string;
 //     schema: Schema;
-//     content: Content;
+//     content: Record<string, Content>;
 //     isArchived: boolean;
 //     createdAt: Date;
 //     updatedAt: Date;
@@ -26,29 +24,28 @@
 // export type Section = Omit<SectionDB, 'user'>;
 // D:\cvBuilder\resumebuilder\src\types\resume\Section.ts
 
-import { SectionTarget, Visibility } from "@prisma/client";
 import { UserDB } from "./User";
 import { Content } from "./Content";
-import { Prisma } from "@prisma/client";
 
-export interface Schema extends Prisma.JsonObject {
+export interface Schema {
     id: string;
     name: string;
     type: string;
     tag: string;
     selectorGroup: string;
     children: Schema[];
-    parentId?: string; // إضافة parentId اختياري
+    parentId?: string;
+    value?: string;
 }
 
 export interface SectionDB {
     id: string;
     name: string;
-    target: SectionTarget;
-    visibility: Visibility;
+    target: "RESUME" | "PORTFOLIO";
+    visibility: "OFFICIAL" | "COMMUNITY" | "PRIVATE";
     authorId: string;
     schema: Schema;
-    content: Content;
+    content: Record<string, Content>;
     isArchived: boolean;
     createdAt: Date;
     updatedAt: Date;

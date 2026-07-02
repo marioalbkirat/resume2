@@ -45,6 +45,37 @@ export default function SettingsPanel() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="p-6">
+                        <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                                <label className="font-medium text-gray-900">Column Layout</label>
+                                <p className="text-sm text-gray-500 mt-1">Choose one or two columns</p>
+                            </div>
+                            <div className="ml-6">
+                                <select value={settings?.columns} onChange={(e) => setSettings(prev => ({ ...prev, columns: e.target.value as "ONE" | "TWO" }))} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="ONE">One Column</option>
+                                    <option value="TWO">Two Columns</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    {settings?.columns === "TWO" && (
+                        <div className="p-6">
+                            <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                    <label className="font-medium text-gray-900">Sidebar Position</label>
+                                    <p className="text-sm text-gray-500 mt-1">Move the sidebar to the left or right</p>
+                                </div>
+                                <div className="ml-6">
+                                    <select value={settings?.sidebar?.position ?? "LEFT"} onChange={(e) => setSettings(prev => ({ ...prev, sidebar: { position: e.target.value as "LEFT" | "RIGHT" } }))} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                        <option value="LEFT">Left</option>
+                                        <option value="RIGHT">Right</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     <div className="p-6">
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
@@ -66,8 +97,8 @@ export default function SettingsPanel() {
                     <div className="p-6">
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
-                                <label className="font-medium text-gray-900">Page Size</label>
-                                <p className="text-sm text-gray-500 mt-1">Select the page size for your resume</p>
+                                <label className="font-medium text-gray-900">File Name</label>
+                                <p className="text-sm text-gray-500 mt-1">Name used when exporting the resume</p>
                             </div>
                             <div className="ml-6">
                                 <input
