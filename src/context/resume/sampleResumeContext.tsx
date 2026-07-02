@@ -7,7 +7,6 @@ import { ResumeStyle } from "@/types/resume/ResumeStyle";
 import { Schema, Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
 import { dbService, StoredResumeData } from "@/services/indexedDB";
-import { sampleContent, sampleDistribution, sampleSections, sampleSettings, sampleStyle } from "./sampleData";
 
 type Mode = "preview" | "edit";
 
@@ -48,6 +47,24 @@ interface SampleResumeContextType {
 const STORAGE_KEY = "resumeData";
 const SampleResumeContext = createContext<SampleResumeContextType | undefined>(undefined);
 
+const defaultSettings: Settings = {
+  columns: "TWO",
+  sidebar: { position: "LEFT" },
+  direction: "LTR",
+  pageSize: "A4",
+  showIcons: true,
+  fileName: "My_Resume",
+};
+
+const defaultStyle: ResumeStyle = {
+  global: {},
+  selectors: {},
+  elements: {},
+  customCSS: "",
+};
+
+const buildContentFromSections = (sections: Section[]): Record<string, Content> => sections.reduce<Record<string, Content>>((acc, section) => ({ ...acc, ...(section.content ?? {}) }), {});
+
 const makeId = (prefix: string) => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? Date.now().toString(36)}`;
 const contentKeyFor = (node: Schema) => (node as Schema & { value?: string }).value || node.id;
 
@@ -85,11 +102,11 @@ const duplicateNode = (node: Schema, content: Record<string, Content>, nextConte
 };
 
 function SampleResumeProvider({ children }: { children: ReactNode }) {
-  const [sections, setSections] = useState<Section[]>(sampleSections);
-  const [settings, setSettingsState] = useState<Settings>(sampleSettings);
-  const [style, setStyleState] = useState<ResumeStyle>(sampleStyle);
-  const [distribution, setDistributionState] = useState<Distribution>(sampleDistribution);
-  const [content, setContentState] = useState<Record<string, Content>>(sampleContent);
+  const [sections, setSections] = useState<Section[]>([]);
+  const [settings, setSettingsState] = useState<Settings>(defaultSettings);
+  const [style, setStyleState] = useState<ResumeStyle>(defaultStyle);
+  const [distribution, setDistributionState] = useState<Distribution>({});
+  const [content, setContentState] = useState<Record<string, Content>>({});
   const [mode, setMode] = useState<Mode>("edit");
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [hasSavedData, setHasSavedData] = useState(false);
@@ -98,20 +115,32 @@ function SampleResumeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    dbService.getResumeData(STORAGE_KEY).then((data) => {
+
+    const loadResumeData = async () => {
+      const [savedData, sectionsResponse] = await Promise.all([
+        dbService.getResumeData(STORAGE_KEY).catch((error) => { console.error("Error loading saved resume data:", error); return null; }),
+        fetch("/api/admin/sections").catch((error) => { console.error("Error loading sections from database:", error); return null; }),
+      ]);
+
       if (!mounted) return;
-      if (data) {
-        setSections(data.sections ?? sampleSections);
-        setSettingsState(data.settings ?? sampleSettings);
-        setStyleState(data.style ?? sampleStyle);
-        setDistributionState(normalizeDistribution(data.sections ?? sampleSections, data.distribution ?? sampleDistribution, data.settings ?? sampleSettings));
-        setContentState(data.content ?? sampleContent);
-        setMode(data.mode ?? "edit");
-        setHasSavedData(true);
-      }
-    }).finally(() => {
+
+      const databaseSections = sectionsResponse?.ok ? await sectionsResponse.json() as Section[] : [];
+      const nextSettings = savedData?.settings ?? defaultSettings;
+      const sectionContent = buildContentFromSections(databaseSections);
+
+      setSections(databaseSections);
+      setSettingsState(nextSettings);
+      setStyleState(savedData?.style ?? defaultStyle);
+      setDistributionState(normalizeDistribution(databaseSections, savedData?.distribution ?? {}, nextSettings));
+      setContentState({ ...sectionContent, ...(savedData?.content ?? {}) });
+      setMode(savedData?.mode ?? "edit");
+      setHasSavedData(Boolean(savedData));
+    };
+
+    loadResumeData().catch((error) => console.error("Error loading sections from database:", error)).finally(() => {
       if (mounted) { setIsLoading(false); setIsInitialized(true); }
     });
+
     return () => { mounted = false; };
   }, []);
 
@@ -166,7 +195,7 @@ function SampleResumeProvider({ children }: { children: ReactNode }) {
   const addNode = useCallback((sectionId: string, _tag: string, _type: string, _name: string, parentId: string) => addListItem(sectionId, parentId), [addListItem]);
   const deleteNode = useCallback((sectionId: string, nodeId: string) => deleteListItem(sectionId, nodeId), [deleteListItem]);
   const updateNode = useCallback((sectionId: string, nodeId: string, tag?: string, name?: string) => setSections((prev) => prev.map((section) => { const walk = (node: Schema): Schema => node.id === nodeId ? { ...node, tag: tag ?? node.tag, name: name ?? node.name } : { ...node, children: node.children?.map(walk) ?? [] }; return section.id === sectionId ? { ...section, schema: walk(section.schema) } : section; })), []);
-  const resetToSample = useCallback(() => { setSections(sampleSections); setSettingsState(sampleSettings); setStyleState(sampleStyle); setDistributionState(sampleDistribution); setContentState(sampleContent); setMode("edit"); setSelectedNodeId(null); setHasSavedData(false); }, []);
+  const resetToSample = useCallback(() => { const sectionContent = buildContentFromSections(sections); setSettingsState(defaultSettings); setStyleState(defaultStyle); setDistributionState(normalizeDistribution(sections, {}, defaultSettings)); setContentState(sectionContent); setMode("edit"); setSelectedNodeId(null); setHasSavedData(false); }, [sections]);
   const toggleMode = useCallback(() => setMode((prev) => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
 
   const value = useMemo(() => ({ sections, settings, style, distribution, content, mode, selectedNodeId, setSections, setSettings, setStyle, setDistribution, setContent, setMode, setSelectedNodeId, updateSection, updateContent, updateDistributionItem, updateSettings, updateStyle, updateElementStyle, addSection, removeSection, addNode, deleteNode, updateNode, addListItem, deleteListItem, toggleMode, resetToSample, hasSavedData, isLoading }), [sections, settings, style, distribution, content, mode, selectedNodeId, setSettings, setStyle, setDistribution, setContent, updateSection, updateContent, updateDistributionItem, updateSettings, updateStyle, updateElementStyle, addSection, removeSection, addNode, deleteNode, updateNode, addListItem, deleteListItem, toggleMode, resetToSample, hasSavedData, isLoading]);
