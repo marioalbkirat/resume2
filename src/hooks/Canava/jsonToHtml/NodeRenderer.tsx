@@ -4,7 +4,8 @@ import { ICON_MAP } from "@/hooks/PickIcons/icons";
 import { Content } from "@/types/resume/Content";
 import { Schema } from "@/types/resume/Section";
 import Image from "next/image";
-import { ElementType } from "react";
+import { CSSProperties, ElementType } from "react";
+import { ResumeStyle, StyleObject } from "@/types/resume/ResumeStyle";
 import { FiTrash2 } from "react-icons/fi";
 
 type NodeRendererProps = {
@@ -19,12 +20,19 @@ type NodeRendererProps = {
   onUpdate?: (nodeId: string, value: string, props?: Record<string, string>) => void;
   onDeleteListItem?: (nodeId: string) => void;
   onSelectNode?: (nodeId: string) => void;
+  style?: ResumeStyle;
 };
 
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
 const contentKeyFor = (node: Schema) => node.id;
+const asCssProperties = (style?: StyleObject) => (style ?? {}) as CSSProperties;
+const getNodeStyle = (node: Schema, style?: ResumeStyle) => ({
+  ...asCssProperties(style?.selectors?.[node.tag]),
+  ...asCssProperties(style?.selectors?.[node.selectorGroup]),
+  ...asCssProperties(style?.elements?.[node.id]),
+});
 
-export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode }: NodeRendererProps) {
+export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode, style }: NodeRendererProps) {
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
   if ((node.tag === "i" || node.tag === "svg") && node.role === "sectionIcon" && !showSectionIcons) return null;
 
@@ -33,6 +41,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   const hasText = !TEXTLESS_TAGS.has(node.tag);
   const isSelected = selectedNodeId === node.id;
   const Tag = node.tag as ElementType;
+  const nodeStyle = getNodeStyle(node, style);
 
   const common = {
     dir: direction.toLowerCase(),
@@ -40,10 +49,11 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     "data-section-id": sectionId,
     onClick: (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); if (isEditable) onSelectNode?.(node.id); },
     className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isEditable ? "cursor-pointer" : ""}`,
+    style: nodeStyle,
   };
 
   const children = node.children?.map((child) => (
-    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} showSectionIcons={showSectionIcons} direction={direction} onUpdate={onUpdate} onDeleteListItem={onDeleteListItem} onSelectNode={onSelectNode} />
+    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} showSectionIcons={showSectionIcons} direction={direction} onUpdate={onUpdate} onDeleteListItem={onDeleteListItem} onSelectNode={onSelectNode} style={style} />
   ));
 
   if (node.tag === "i") {
@@ -68,7 +78,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
 
   if (hasText) {
     return (
-      <Tag {...common} contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} style={{ outline: "none" }}>
+      <Tag {...common} contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} style={{ ...nodeStyle, outline: "none" }}>
         {nodeContent?.value ?? ""}
       </Tag>
     );

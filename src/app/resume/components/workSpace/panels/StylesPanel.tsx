@@ -1,251 +1,188 @@
-import { useState } from "react";
+"use client";
+
+import { useMemo, useState } from "react";
 import { useResumeBuilder } from "@/context/resume/ResumeContext";
-import { FiSave, FiRefreshCw } from "react-icons/fi";
-interface ColorScheme {
-    id: string;
-    name: string;
-    primary: string;
-    secondary: string;
-    accent: string;
-    background: string;
-    text: string;
-}
-interface FontOption {
-    id: string;
-    name: string;
-    className: string;
-}
+import { ResumeStyle, StyleObject } from "@/types/resume/ResumeStyle";
+import { Schema } from "@/types/resume/Section";
+import { FiRefreshCw, FiSliders } from "react-icons/fi";
+
+type StyleTarget = "global" | "selector" | "element";
+type StyleField = keyof Pick<StyleObject, "color" | "backgroundColor" | "fontSize" | "fontWeight" | "lineHeight" | "marginBottom" | "padding" | "borderRadius">;
+
+const emptyStyle: ResumeStyle = { global: {}, selectors: {}, elements: {}, customCSS: "" };
+
+const fields: { key: StyleField; label: string; type: "color" | "text" | "number"; placeholder?: string }[] = [
+    { key: "color", label: "Text color", type: "color" },
+    { key: "backgroundColor", label: "Background", type: "color" },
+    { key: "fontSize", label: "Font size", type: "number", placeholder: "14" },
+    { key: "fontWeight", label: "Font weight", type: "text", placeholder: "400 / 600 / bold" },
+    { key: "lineHeight", label: "Line height", type: "text", placeholder: "1.5 / 22px" },
+    { key: "marginBottom", label: "Bottom space", type: "text", placeholder: "8px" },
+    { key: "padding", label: "Padding", type: "text", placeholder: "12px" },
+    { key: "borderRadius", label: "Radius", type: "text", placeholder: "8px" },
+];
+
+const presets: { id: string; name: string; description: string; patch: ResumeStyle }[] = [
+    {
+        id: "clean",
+        name: "Clean",
+        description: "Simple readable resume with blue section titles.",
+        patch: {
+            global: { fontFamily: "Inter, Arial, sans-serif", color: "#1f2937", backgroundColor: "#ffffff", fontSize: 14, lineHeight: "1.55" },
+            selectors: { heading: { color: "#1d4ed8", fontWeight: 700, marginBottom: "8px" }, text: { color: "#374151" } },
+            elements: {},
+            customCSS: "",
+        },
+    },
+    {
+        id: "modern",
+        name: "Modern",
+        description: "Soft purple accents and comfortable spacing.",
+        patch: {
+            global: { fontFamily: "Inter, Arial, sans-serif", color: "#312e81", backgroundColor: "#faf5ff", fontSize: 14, lineHeight: "1.6" },
+            selectors: { heading: { color: "#7c3aed", fontWeight: 800 }, section: { padding: "14px", borderRadius: "14px", backgroundColor: "#ffffff" } },
+            elements: {},
+            customCSS: "",
+        },
+    },
+    {
+        id: "classic",
+        name: "Classic",
+        description: "Traditional black and white layout.",
+        patch: {
+            global: { fontFamily: "Georgia, serif", color: "#111827", backgroundColor: "#ffffff", fontSize: 13, lineHeight: "1.5" },
+            selectors: { heading: { color: "#111827", fontWeight: 700, borderBottom: "1px solid #d1d5db", paddingBottom: "4px" } },
+            elements: {},
+            customCSS: "",
+        },
+    },
+];
+
+const walkSchema = (node: Schema, items: Schema[] = []) => {
+    items.push(node);
+    node.children?.forEach((child) => walkSchema(child, items));
+    return items;
+};
+
+const cleanStyle = (style: StyleObject) => Object.fromEntries(Object.entries(style).filter(([, value]) => value !== "" && value !== undefined && value !== null)) as StyleObject;
+
 export default function StylesPanel() {
-    const { style, setStyle } = useResumeBuilder();
-    const [selectedColor, setSelectedColor] = useState<string>("modern");
-    const [selectedFont, setSelectedFont] = useState<string>("inter");
-    const [spacing, setSpacing] = useState<number>(16);
-    const [fontSize, setFontSize] = useState<number>(14);
-    const colorSchemes: ColorScheme[] = [
-        {
-            id: "professional",
-            name: "Professional Blue",
-            primary: "#2563eb",
-            secondary: "#3b82f6",
-            accent: "#60a5fa",
-            background: "#ffffff",
-            text: "#1f2937",
-        },
-        {
-            id: "modern",
-            name: "Modern Purple",
-            primary: "#7c3aed",
-            secondary: "#8b5cf6",
-            accent: "#a78bfa",
-            background: "#faf5ff",
-            text: "#4c1d95",
-        },
-        {
-            id: "corporate",
-            name: "Corporate Gray",
-            primary: "#374151",
-            secondary: "#4b5563",
-            accent: "#6b7280",
-            background: "#f9fafb",
-            text: "#111827",
-        },
-        {
-            id: "creative",
-            name: "Creative Pink",
-            primary: "#ec4899",
-            secondary: "#f43f5e",
-            accent: "#fb7185",
-            background: "#fff1f2",
-            text: "#9f1239",
-        },
-        {
-            id: "dark",
-            name: "Dark Mode",
-            primary: "#3b82f6",
-            secondary: "#60a5fa",
-            accent: "#93c5fd",
-            background: "#1e293b",
-            text: "#f8fafc",
-        },
-    ];
+    const { style, setStyle, sections, selectedNodeId, setSelectedNodeId } = useResumeBuilder();
+    const nodes = useMemo(() => sections.flatMap((section) => walkSchema(section.schema).map((node) => ({ ...node, sectionName: section.name }))), [sections]);
+    const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? nodes[0];
+    const selectorGroups = useMemo(() => Array.from(new Set(nodes.map((node) => node.selectorGroup || node.tag).filter(Boolean))).sort(), [nodes]);
 
-    const fontOptions: FontOption[] = [
-        { id: "inter", name: "Inter", className: "font-sans" },
-        { id: "roboto", name: "Roboto", className: "font-roboto" },
-        { id: "opensans", name: "Open Sans", className: "font-opensans" },
-        { id: "lato", name: "Lato", className: "font-lato" },
-        { id: "playfair", name: "Playfair Display", className: "font-playfair" },
-    ];
+    const [target, setTarget] = useState<StyleTarget>("global");
+    const [selectorKey, setSelectorKey] = useState(selectorGroups[0] ?? "heading");
+    const elementKey = selectedNode?.id ?? "";
 
-    const currentColor = colorSchemes.find((c) => c.id === selectedColor)!;
+    const activeKey = target === "selector" ? selectorKey : target === "element" ? elementKey : "global";
+    const activeStyle = target === "global" ? style.global : target === "selector" ? style.selectors?.[selectorKey] ?? {} : style.elements?.[elementKey] ?? {};
 
+    const updateActiveStyle = (patch: StyleObject) => {
+        setStyle((previous) => {
+            if (target === "global") return { ...previous, global: cleanStyle({ ...previous.global, ...patch }) };
+            if (target === "selector") return { ...previous, selectors: { ...previous.selectors, [selectorKey]: cleanStyle({ ...(previous.selectors?.[selectorKey] ?? {}), ...patch }) } };
+            if (!elementKey) return previous;
+            return { ...previous, elements: { ...previous.elements, [elementKey]: cleanStyle({ ...(previous.elements?.[elementKey] ?? {}), ...patch }) } };
+        });
+    };
 
-    const applyStyles = () => setStyle((previous) => ({
-        ...previous,
-        global: {
-            ...previous.global,
-            "--resume-primary": currentColor.primary,
-            "--resume-secondary": currentColor.secondary,
-            "--resume-accent": currentColor.accent,
-            backgroundColor: currentColor.background,
-            color: currentColor.text,
-            fontSize,
-            lineHeight: `${spacing}px`,
-        },
-    }));
-
-    const resetStyles = () => setStyle({ global: {}, selectors: {}, elements: {}, customCSS: "" });
+    const removeActiveStyle = () => {
+        setStyle((previous) => {
+            if (target === "global") return { ...previous, global: {} };
+            if (target === "selector") {
+                const selectors = { ...previous.selectors };
+                delete selectors[selectorKey];
+                return { ...previous, selectors };
+            }
+            const elements = { ...previous.elements };
+            delete elements[elementKey];
+            return { ...previous, elements };
+        });
+    };
 
     return (
         <div className="space-y-6">
-            {/* Color Schemes */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Color Schemes {Object.keys(style.global ?? {}).length > 0 && <span className="ml-2 text-xs font-normal text-blue-600">Template style loaded</span>}</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {colorSchemes.map((scheme) => (
-                        <button
-                            key={scheme.id}
-                            onClick={() => setSelectedColor(scheme.id)}
-                            className={`p-4 rounded-xl transition-all cursor-pointer ${selectedColor === scheme.id
-                                ? "ring-2 ring-blue-500 ring-offset-2 shadow-lg"
-                                : "hover:shadow-md"
-                                }`}
-                            style={{ backgroundColor: scheme.background }}
-                        >
-                            <div className="space-y-2">
-                                <div className="flex gap-1">
-                                    <div
-                                        className="w-6 h-6 rounded-full"
-                                        style={{ backgroundColor: scheme.primary }}
-                                    />
-                                    <div
-                                        className="w-6 h-6 rounded-full"
-                                        style={{ backgroundColor: scheme.secondary }}
-                                    />
-                                    <div
-                                        className="w-6 h-6 rounded-full"
-                                        style={{ backgroundColor: scheme.accent }}
-                                    />
-                                </div>
-                                <p className="text-sm font-medium" style={{ color: scheme.text }}>
-                                    {scheme.name}
-                                </p>
-                            </div>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Typography */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Typography</h3>
-                <div className="space-y-4">
+            <div className="rounded-2xl bg-white p-6 shadow-lg">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Font Family</label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                            {fontOptions.map((font) => (
-                                <button
-                                    key={font.id}
-                                    onClick={() => setSelectedFont(font.id)}
-                                    className={`p-3 rounded-lg border transition-all cursor-pointer ${selectedFont === font.id
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-200 hover:border-gray-300"
-                                        }`}
-                                >
-                                    <p className={`${font.className} font-medium`}>{font.name}</p>
-                                    <p className={`${font.className} text-xs text-gray-500 mt-1`}>
-                                        The quick brown fox
-                                    </p>
-                                </button>
-                            ))}
-                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900">Resume Styles</h3>
+                        <p className="mt-1 text-sm text-gray-500">Edit global styles, selector groups for similar elements, or the selected schema element by ID.</p>
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Font Size: {fontSize}px
-                        </label>
-                        <input
-                            type="range"
-                            min="10"
-                            max="20"
-                            value={fontSize}
-                            onChange={(e) => setFontSize(parseInt(e.target.value))}
-                            className="w-full"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Line Spacing: {spacing}px
-                        </label>
-                        <input
-                            type="range"
-                            min="12"
-                            max="32"
-                            value={spacing}
-                            onChange={(e) => setSpacing(parseInt(e.target.value))}
-                            className="w-full"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {/* Live Preview */}
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">Live Preview</h3>
-                </div>
-                <div
-                    className="p-6 transition-all"
-                    style={{
-                        backgroundColor: currentColor.background,
-                        color: currentColor.text,
-                        fontSize: `${fontSize}px`,
-                        lineHeight: `${spacing}px`,
-                    }}
-                >
-                    <div className="space-y-4">
-                        <h2
-                            className="text-2xl font-bold"
-                            style={{ color: currentColor.primary }}
-                        >
-                            John Doe
-                        </h2>
-                        <p className={fontOptions.find((f) => f.id === selectedFont)?.className}>
-                            Experienced software developer with 5+ years of expertise in building
-                            scalable web applications. Passionate about creating elegant solutions
-                            to complex problems.
-                        </p>
-                        <div className="flex gap-4">
-                            <div
-                                className="px-4 py-2 rounded-lg text-white"
-                                style={{ backgroundColor: currentColor.primary }}
-                            >
-                                View Portfolio
-                            </div>
-                            <div
-                                className="px-4 py-2 rounded-lg"
-                                style={{ backgroundColor: currentColor.secondary + "20", color: currentColor.secondary }}
-                            >
-                                Download CV
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex gap-4 justify-end">
-                    <button onClick={resetStyles} className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center gap-2 cursor-pointer">
-                        <FiRefreshCw className="w-4 h-4" />
-                        Reset to Default
+                    <button onClick={() => setStyle(emptyStyle)} className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                        <FiRefreshCw /> Reset all
                     </button>
-                    <button onClick={applyStyles} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 cursor-pointer">
-                        <FiSave className="w-4 h-4" />
-                        Apply Styles
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+                {presets.map((preset) => (
+                    <button key={preset.id} onClick={() => setStyle((previous) => ({ ...previous, ...preset.patch }))} className="cursor-pointer rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md">
+                        <p className="font-semibold text-gray-900">{preset.name}</p>
+                        <p className="mt-1 text-sm text-gray-500">{preset.description}</p>
                     </button>
+                ))}
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+                <div className="space-y-4 rounded-2xl bg-white p-6 shadow-lg">
+                    <h4 className="flex items-center gap-2 font-semibold text-gray-900"><FiSliders /> Target</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                        {(["global", "selector", "element"] as StyleTarget[]).map((item) => (
+                            <button key={item} onClick={() => setTarget(item)} className={`cursor-pointer rounded-lg px-3 py-2 text-sm font-medium capitalize ${target === item ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}>{item}</button>
+                        ))}
+                    </div>
+
+                    {target === "selector" && (
+                        <label className="block text-sm font-medium text-gray-700">
+                            Selector group
+                            <select value={selectorKey} onChange={(event) => setSelectorKey(event.target.value)} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2">
+                                {selectorGroups.map((group) => <option key={group} value={group}>{group}</option>)}
+                            </select>
+                        </label>
+                    )}
+
+                    {target === "element" && (
+                        <label className="block text-sm font-medium text-gray-700">
+                            Element ID from schema
+                            <select value={elementKey} onChange={(event) => setSelectedNodeId(event.target.value)} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2">
+                                {nodes.map((node) => <option key={node.id} value={node.id}>{node.name} ({node.id})</option>)}
+                            </select>
+                        </label>
+                    )}
+
+                    <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-800">
+                        Current target: <strong>{activeKey}</strong>. Selector styles apply to every schema node with the same <code>selectorGroup</code>; element styles are stored by node <code>id</code> and override selector styles.
+                    </div>
+                </div>
+
+                <div className="rounded-2xl bg-white p-6 shadow-lg">
+                    <div className="mb-5 flex items-center justify-between">
+                        <h4 className="font-semibold text-gray-900">Style controls</h4>
+                        <button onClick={removeActiveStyle} className="cursor-pointer rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-100">Clear target</button>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {fields.map((field) => {
+                            const value = activeStyle[field.key] ?? "";
+                            return (
+                                <label key={field.key} className="block text-sm font-medium text-gray-700">
+                                    {field.label}
+                                    <input
+                                        type={field.type === "number" ? "number" : field.type}
+                                        value={field.type === "color" && !value ? "#000000" : String(value)}
+                                        placeholder={field.placeholder}
+                                        onChange={(event) => updateActiveStyle({ [field.key]: field.type === "number" ? Number(event.target.value) : event.target.value })}
+                                        className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-900"
+                                    />
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <label className="mt-4 block text-sm font-medium text-gray-700">
+                        Custom CSS for the canvas
+                        <textarea value={style.customCSS ?? ""} onChange={(event) => setStyle((previous) => ({ ...previous, customCSS: event.target.value }))} rows={5} className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 font-mono text-sm text-gray-900" placeholder="#resume .resume-section { ... }" />
+                    </label>
                 </div>
             </div>
         </div>

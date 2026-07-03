@@ -1,4 +1,4 @@
-interface StyleObject {
+export interface StyleObject {
     [property: string]: string | number;
 }
 
