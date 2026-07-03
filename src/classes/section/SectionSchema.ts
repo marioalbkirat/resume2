@@ -152,7 +152,7 @@ export class SectionSchema {
         return ["div", "ul", "img", 'i', "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
     }
 
-    addNode(section: Schema, tag: string, name: string, parentId: string): { section: Schema; child: Schema } | null {
+    addNode(section: Schema, tag: string, name: string, parentId: string, role: "default" | "sectionIcon" = "default"): { section: Schema; child: Schema } | null {
         if (!section || !tag || !name || !parentId) return null;
         if (typeof tag !== "string" || typeof name !== "string" || typeof parentId !== "string") return null;
         if (!this.tags.includes(tag)) return null;
@@ -164,6 +164,7 @@ export class SectionSchema {
             id: this.generateId(),
             tag,
             type: this.alias[tag] || tag,
+            role: tag === "i" ? role : undefined,
             selectorGroup: tag,
             name,
             children: [],
@@ -181,13 +182,15 @@ export class SectionSchema {
         return section;
     }
 
-    updateNode(section: Schema, nodeId: string, tag?: string, name?: string): Schema | null {
+    updateNode(section: Schema, nodeId: string, tag?: string, name?: string, role?: "default" | "sectionIcon"): Schema | null {
         const node: Schema | null = this.getNode(section, nodeId);
         if (!node) return null;
         if (tag !== undefined) {
             node.tag = tag;
             node.type = this.alias[tag] || tag;
+            if (tag !== "i") node.role = undefined;
         }
+        if (role !== undefined && node.tag === "i") node.role = role;
         if (name !== undefined) node.name = name;
         return section;
     }

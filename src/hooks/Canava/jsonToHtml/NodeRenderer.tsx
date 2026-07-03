@@ -14,6 +14,7 @@ type NodeRendererProps = {
   isEditable?: boolean;
   selectedNodeId?: string | null;
   showIcons?: boolean;
+  showSectionIcons?: boolean;
   direction?: "LTR" | "RTL";
   onUpdate?: (nodeId: string, value: string, props?: Record<string, string>) => void;
   onDeleteListItem?: (nodeId: string) => void;
@@ -23,8 +24,9 @@ type NodeRendererProps = {
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
 const contentKeyFor = (node: Schema) => (node as Schema & { value?: string }).value || node.id;
 
-export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode }: NodeRendererProps) {
+export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode }: NodeRendererProps) {
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
+  if ((node.tag === "i" || node.tag === "svg") && node.role === "sectionIcon" && !showSectionIcons) return null;
 
   const key = contentKeyFor(node);
   const nodeContent = content[key];
@@ -41,7 +43,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   };
 
   const children = node.children?.map((child) => (
-    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} direction={direction} onUpdate={onUpdate} onDeleteListItem={onDeleteListItem} onSelectNode={onSelectNode} />
+    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} showSectionIcons={showSectionIcons} direction={direction} onUpdate={onUpdate} onDeleteListItem={onDeleteListItem} onSelectNode={onSelectNode} />
   ));
 
   if (node.tag === "i") {
