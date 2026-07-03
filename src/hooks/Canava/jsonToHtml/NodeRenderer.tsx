@@ -61,7 +61,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
       <li {...common} className={`relative pe-7 ${common.className}`}>
         <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent?.value ?? ""}</span>
         {children}
-        {isEditable && <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteListItem?.(node.id); }} className="absolute end-0 top-0 rounded p-1 text-red-500 hover:bg-red-50" title="Delete item"><FiTrash2 size={14} /></button>}
+        {isEditable && <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteListItem?.(node.id); }} className="absolute end-0 top-0 cursor-pointer rounded p-1 text-red-500 hover:bg-red-50" title="Delete item"><FiTrash2 size={14} /></button>}
       </li>
     );
   }

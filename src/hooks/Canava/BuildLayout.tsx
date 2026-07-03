@@ -62,10 +62,10 @@ export default function BuildLayout({ sections, settings, distribution, content 
       <section key={section.id} className="resume-section group mb-5 break-inside-avoid" data-section-id={section.id}>
         {isEditable && (
           <div className="mb-2 flex items-center justify-between bg-transparent px-0 py-1 text-xs text-gray-600 print:hidden">
-            <span>{config?.showIcon && settings.showIcons ? "📁 " : ""}{section.name}</span>
+            <span>{section.name}</span>
             {listId && (
-              <button type="button" onClick={() => onListItemAdd?.(section.id, listId)} className="inline-flex items-center gap-1 rounded bg-green-600 px-2 py-1 text-white hover:bg-green-700" title={`Add ${section.name} item`}>
-                <FiPlus /> Add
+              <button type="button" onClick={() => onListItemAdd?.(section.id, listId)} className="inline-flex cursor-pointer items-center justify-center rounded bg-green-600 p-1.5 text-white hover:bg-green-700" title={`Add ${section.name} item`} aria-label={`Add ${section.name} item`}>
+                <FiPlus />
               </button>
             )}
           </div>
