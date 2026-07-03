@@ -35,16 +35,21 @@ const findFirstListId = (section: Section): string | null => {
 
 export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style }: BuildLayoutProps) {
   const isEditable = mode === "edit";
-  const pageSizeStyle = useMemo<CSSProperties>(() => ({
-    ...style,
-    boxSizing: "border-box",
-    width: settings.pageSize === "A4" ? "210mm" : "215.9mm",
-    minHeight: settings.pageSize === "A4" ? "297mm" : "279.4mm",
-    padding: "10mm",
-    boxShadow: "0 0 3px rgba(0,0,0,0.2)",
-    background: "white",
-    overflow: "visible",
-  }), [settings.pageSize, style]);
+  const pageSizeStyle = useMemo<CSSProperties>(() => {
+    const { background, ...safeStyle } = style ?? {};
+    const fallbackBackgroundColor = typeof background === "number" ? `${background}` : background;
+
+    return {
+      ...safeStyle,
+      boxSizing: "border-box",
+      width: settings.pageSize === "A4" ? "210mm" : "215.9mm",
+      minHeight: settings.pageSize === "A4" ? "297mm" : "279.4mm",
+      padding: "10mm",
+      boxShadow: "0 0 3px rgba(0,0,0,0.2)",
+      backgroundColor: safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white",
+      overflow: "visible",
+    };
+  }, [settings.pageSize, style]);
 
   const sortedSections = useMemo(() => [...sections]
     .filter((section) => Boolean(distribution[section.id]) && (distribution[section.id]?.visible ?? true))

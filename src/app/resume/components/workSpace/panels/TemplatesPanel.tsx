@@ -55,32 +55,104 @@ export default function TemplatesPanel() {
                 {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} views={template.views} downloads={template.downloads} likes={template.likes} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} />)}
             </div>
             {showBlankDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-4xl rounded-2xl bg-white shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-gray-200 p-6">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-start justify-between border-b border-gray-200 p-6">
                             <div>
                                 <h3 className="text-2xl font-bold text-gray-900">Start From Scratch</h3>
-                                <p className="mt-1 text-sm text-gray-500">Configure the resume settings. Sections stay empty until you choose them from SectionsPanel.</p>
+                                <p className="mt-1 text-sm text-gray-500">Configure the blank resume settings. Sections stay empty until you choose them from the Sections panel.</p>
                             </div>
-                            <button onClick={resetBlankDialog} className="rounded-lg p-2 hover:bg-gray-100"><FiX /></button>
+                            <button type="button" onClick={resetBlankDialog} className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Close start from scratch dialog"><FiX /></button>
                         </div>
-                        <div className="p-6">
-                            <div className="mb-6 flex items-center gap-3 rounded-xl bg-blue-50 p-4 text-sm text-blue-700">
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 font-semibold text-white">1</span>
-                                <span>Settings only — after creating the draft, go to Resume Sections to add sections and fill the distribution.</span>
+                        <div className="grid max-h-[75vh] grid-cols-1 gap-8 overflow-y-auto p-6 lg:grid-cols-2">
+                            <div className="space-y-6">
+                                <div className="rounded-xl bg-gray-50 p-5">
+                                    <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
+                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-sm text-white">1</span>
+                                        Basic Settings
+                                    </h3>
+                                    <div className="space-y-3">
+                                        <label className="block">
+                                            <span className="mb-1 block text-sm font-medium text-gray-700">File name</span>
+                                            <input value={draftSettings.fileName} onChange={(e) => setDraftSettings(p => ({ ...p, fileName: e.target.value }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500" />
+                                        </label>
+                                        <label className="block">
+                                            <span className="mb-1 block text-sm font-medium text-gray-700">Language Direction</span>
+                                            <select value={draftSettings.direction} onChange={(e) => setDraftSettings(p => ({ ...p, direction: e.target.value as "LTR" | "RTL" }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"><option value="LTR">LTR</option><option value="RTL">RTL</option></select>
+                                        </label>
+                                        <label className="block">
+                                            <span className="mb-1 block text-sm font-medium text-gray-700">Page Size</span>
+                                            <select value={draftSettings.pageSize} onChange={(e) => setDraftSettings(p => ({ ...p, pageSize: e.target.value as "A4" | "LETTER" }))} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500"><option value="A4">A4 (210 × 297mm)</option><option value="LETTER">Letter (8.5 × 11in)</option></select>
+                                        </label>
+                                        <label className="flex cursor-pointer items-center gap-2">
+                                            <input type="checkbox" checked={draftSettings.showIcons} onChange={(e) => setDraftSettings(p => ({ ...p, showIcons: e.target.checked }))} className="h-4 w-4 rounded text-blue-500" />
+                                            <span className="text-sm text-gray-700">Show icons in sections</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl bg-gray-50 p-5">
+                                    <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
+                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-sm text-white">2</span>
+                                        Layout Settings
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <span className="mb-2 block text-sm font-medium text-gray-700">Column Layout</span>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <button type="button" onClick={() => updateDraftColumns("ONE")} className={`rounded-lg border-2 p-3 text-center transition ${draftSettings.columns === "ONE" ? "border-blue-500 bg-blue-50 shadow-md" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"}`}>
+                                                    <div className="mb-2 h-16 w-full rounded bg-gray-200"></div>
+                                                    <span className="text-sm font-medium">Single Column</span>
+                                                    {draftSettings.columns === "ONE" && <div className="mt-1 text-xs text-blue-500">✓ Selected</div>}
+                                                </button>
+                                                <button type="button" onClick={() => updateDraftColumns("TWO")} className={`rounded-lg border-2 p-3 text-center transition ${draftSettings.columns === "TWO" ? "border-blue-500 bg-blue-50 shadow-md" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"}`}>
+                                                    <div className="mb-2 flex h-16 gap-1">
+                                                        <div className="w-1/3 rounded bg-gray-300"></div>
+                                                        <div className="w-2/3 rounded bg-gray-200"></div>
+                                                    </div>
+                                                    <span className="text-sm font-medium">Two Columns</span>
+                                                    {draftSettings.columns === "TWO" && <div className="mt-1 text-xs text-blue-500">✓ Selected</div>}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {draftSettings.columns === "TWO" && (
+                                            <div>
+                                                <span className="mb-2 block text-sm font-medium text-gray-700">Sidebar Position</span>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button type="button" onClick={() => setDraftSettings(p => ({ ...p, sidebar: { position: "LEFT" } }))} className={`rounded-lg border-2 p-2 text-center transition ${draftSettings.sidebar?.position === "LEFT" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>Left</button>
+                                                    <button type="button" onClick={() => setDraftSettings(p => ({ ...p, sidebar: { position: "RIGHT" } }))} className={`rounded-lg border-2 p-2 text-center transition ${draftSettings.sidebar?.position === "RIGHT" ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>Right</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div className="grid gap-4 md:grid-cols-2">
-                                <label className="space-y-2"><span className="text-sm font-medium text-gray-700">File name</span><input value={draftSettings.fileName} onChange={(e) => setDraftSettings(p => ({ ...p, fileName: e.target.value }))} className="w-full rounded-lg border border-gray-300 p-3 focus:ring-2 focus:ring-blue-500" /></label>
-                                <label className="space-y-2"><span className="text-sm font-medium text-gray-700">Writing direction</span><select value={draftSettings.direction} onChange={(e) => setDraftSettings(p => ({ ...p, direction: e.target.value as "LTR" | "RTL" }))} className="w-full rounded-lg border border-gray-300 p-3"><option value="LTR">LTR</option><option value="RTL">RTL</option></select></label>
-                                <label className="space-y-2"><span className="text-sm font-medium text-gray-700">Page size</span><select value={draftSettings.pageSize} onChange={(e) => setDraftSettings(p => ({ ...p, pageSize: e.target.value as "A4" | "LETTER" }))} className="w-full rounded-lg border border-gray-300 p-3"><option value="A4">A4</option><option value="LETTER">Letter</option></select></label>
-                                <label className="space-y-2"><span className="text-sm font-medium text-gray-700">Column layout</span><select value={draftSettings.columns} onChange={(e) => updateDraftColumns(e.target.value as "ONE" | "TWO")} className="w-full rounded-lg border border-gray-300 p-3"><option value="ONE">One column</option><option value="TWO">Two columns</option></select></label>
-                                {draftSettings.columns === "TWO" && <label className="space-y-2"><span className="text-sm font-medium text-gray-700">Sidebar position</span><select value={draftSettings.sidebar?.position ?? "LEFT"} onChange={(e) => setDraftSettings(p => ({ ...p, sidebar: { position: e.target.value as "LEFT" | "RIGHT" } }))} className="w-full rounded-lg border border-gray-300 p-3"><option value="LEFT">Sidebar left</option><option value="RIGHT">Sidebar right</option></select></label>}
-                                <label className="flex items-center gap-3 rounded-lg border border-gray-200 p-3"><input type="checkbox" checked={draftSettings.showIcons} onChange={(e) => setDraftSettings(p => ({ ...p, showIcons: e.target.checked }))} /> <span className="text-sm font-medium text-gray-700">Show all icons</span></label>
+
+                            <div className="rounded-xl bg-gray-50 p-5">
+                                <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-gray-900">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-500 text-sm text-white">3</span>
+                                    Blank Resume Preview
+                                </h3>
+                                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                                    <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3">
+                                        <div>
+                                            <div className="h-4 w-36 rounded bg-blue-500"></div>
+                                            <div className="mt-2 h-2 w-24 rounded bg-gray-200"></div>
+                                        </div>
+                                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-600">{draftSettings.pageSize}</span>
+                                    </div>
+                                    <div className={draftSettings.columns === "TWO" ? "grid grid-cols-[1fr_2fr] gap-4" : "space-y-4"} dir={draftSettings.direction.toLowerCase()}>
+                                        {draftSettings.columns === "TWO" && draftSettings.sidebar?.position !== "RIGHT" && <div className="space-y-3 rounded-lg bg-gray-100 p-3"><div className="h-3 w-16 rounded bg-gray-300"></div><div className="h-2 rounded bg-gray-200"></div><div className="h-2 w-4/5 rounded bg-gray-200"></div></div>}
+                                        <div className="space-y-3 rounded-lg bg-gray-50 p-3"><div className="h-3 w-24 rounded bg-gray-300"></div><div className="h-2 rounded bg-gray-200"></div><div className="h-2 rounded bg-gray-200"></div><div className="h-2 w-2/3 rounded bg-gray-200"></div></div>
+                                        {draftSettings.columns === "TWO" && draftSettings.sidebar?.position === "RIGHT" && <div className="space-y-3 rounded-lg bg-gray-100 p-3"><div className="h-3 w-16 rounded bg-gray-300"></div><div className="h-2 rounded bg-gray-200"></div><div className="h-2 w-4/5 rounded bg-gray-200"></div></div>}
+                                    </div>
+                                </div>
+                                <p className="mt-4 rounded-xl bg-blue-50 p-4 text-sm text-blue-700">Settings only — after creating the draft, go to Resume Sections to add sections and fill the distribution.</p>
                             </div>
                         </div>
                         <div className="flex justify-between gap-3 border-t border-gray-200 p-6">
-                            <button onClick={resetBlankDialog} className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200">Cancel</button>
-                            <button onClick={createBlankDraft} className="rounded-lg bg-blue-600 px-5 py-2 text-white hover:bg-blue-700">Create Draft</button>
+                            <button type="button" onClick={resetBlankDialog} className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-gray-700 transition hover:bg-gray-200">Cancel</button>
+                            <button type="button" onClick={createBlankDraft} className="rounded-lg bg-blue-600 px-5 py-2 text-white transition hover:bg-blue-700">Create Draft</button>
                         </div>
                     </div>
                 </div>
