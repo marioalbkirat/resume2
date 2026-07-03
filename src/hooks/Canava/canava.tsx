@@ -9,7 +9,7 @@ export default function Canava() {
   return (
     <>
       {style.customCSS && <style>{style.customCSS}</style>}
-      <BuildLayout sections={sections} settings={settings} distribution={distribution} content={content} mode={mode} selectedNodeId={selectedNodeId} onNodeSelect={setSelectedNodeId} onNodeUpdate={updateContent} onListItemAdd={addListItem} onListItemDelete={deleteListItem} style={style.global} />
+      <BuildLayout sections={sections} settings={settings} distribution={distribution} content={content} mode={mode} selectedNodeId={selectedNodeId} onNodeSelect={setSelectedNodeId} onNodeUpdate={updateContent} onListItemAdd={addListItem} onListItemDelete={deleteListItem} style={style} />
     </>
   );
 }

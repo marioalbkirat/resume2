@@ -5,6 +5,7 @@ import { Distribution } from "@/types/resume/Distribution";
 import { Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
 import { CSSProperties, useMemo } from "react";
+import { ResumeStyle } from "@/types/resume/ResumeStyle";
 import { FiPlus } from "react-icons/fi";
 import NodeRenderer from "./jsonToHtml/NodeRenderer";
 
@@ -19,7 +20,7 @@ interface BuildLayoutProps {
   onNodeUpdate?: (sectionId: string, nodeId: string, value: string, props?: Record<string, string>) => void;
   onListItemAdd?: (sectionId: string, listNodeId: string) => void;
   onListItemDelete?: (sectionId: string, listItemId: string) => void;
-  style?: CSSProperties;
+  style?: ResumeStyle;
 }
 
 const findFirstListId = (section: Section): string | null => {
@@ -36,8 +37,8 @@ const findFirstListId = (section: Section): string | null => {
 export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const pageSizeStyle = useMemo<CSSProperties>(() => {
-    const { background, ...safeStyle } = style ?? {};
-    const fallbackBackgroundColor = typeof background === "number" ? `${background}` : background;
+    const { background, ...safeStyle } = style?.global ?? {};
+    const fallbackBackgroundColor = background === undefined ? undefined : String(background);
 
     return {
       ...safeStyle,
@@ -46,10 +47,10 @@ export default function BuildLayout({ sections, settings, distribution, content 
       minHeight: settings.pageSize === "A4" ? "297mm" : "279.4mm",
       padding: "10mm",
       boxShadow: "0 0 3px rgba(0,0,0,0.2)",
-      backgroundColor: safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white",
+      backgroundColor: String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white"),
       overflow: "visible",
     };
-  }, [settings.pageSize, style]);
+  }, [settings.pageSize, style?.global]);
 
   const sortedSections = useMemo(() => [...sections]
     .filter((section) => Boolean(distribution[section.id]) && (distribution[section.id]?.visible ?? true))
@@ -82,6 +83,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
           onUpdate={(nodeId, value, props) => onNodeUpdate?.(section.id, nodeId, value, props)}
           onDeleteListItem={(nodeId) => onListItemDelete?.(section.id, nodeId)}
           onSelectNode={onNodeSelect}
+          style={style}
         />
       </section>
     );
