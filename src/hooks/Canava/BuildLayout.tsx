@@ -41,6 +41,8 @@ const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
   delete safeStyle.sidebarBackgroundColor;
   delete safeStyle.mainBackgroundColor;
   delete safeStyle.columnBorder;
+  delete safeStyle.leftColumnWidth;
+  delete safeStyle.rightColumnWidth;
   return { safeStyle, background };
 };
 
@@ -66,6 +68,8 @@ export default function BuildLayout({ sections, settings, distribution, content 
     sidebar: { backgroundColor: style?.global?.sidebarBackgroundColor } as CSSProperties,
     main: { backgroundColor: style?.global?.mainBackgroundColor } as CSSProperties,
     divider: String(style?.global?.columnBorder ?? ""),
+    leftWidth: String(style?.global?.leftColumnWidth ?? "1fr"),
+    rightWidth: String(style?.global?.rightColumnWidth ?? "2fr"),
   }), [style?.global]);
 
   const sortedSections = useMemo(() => [...sections]
@@ -118,7 +122,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
 
   return (
     <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>
-      <div style={{ display: "grid", gridTemplateColumns: sidebarLeft ? "1fr 2fr" : "2fr 1fr", gap: "24px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: sidebarLeft ? `${columnStyle.leftWidth} ${columnStyle.rightWidth}` : `${columnStyle.rightWidth} ${columnStyle.leftWidth}`, gap: "24px" }}>
         {sidebarLeft ? <>{sidebar}{main}</> : <>{main}{sidebar}</>}
       </div>
     </div>
