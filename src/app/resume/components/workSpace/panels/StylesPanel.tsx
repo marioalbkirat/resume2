@@ -9,6 +9,7 @@ import { FiRefreshCw, FiSave } from "react-icons/fi";
 type TabKey = "theme" | "typography" | "spacing" | "sections" | "selected";
 type ControlKind = "text" | "color" | "range" | "select" | "buttonGroup";
 type SmartGroup = "text" | "image" | "icon" | "layout" | "list" | "listItem";
+type Scope = "global" | "selector" | "element";
 
 interface ColorScheme {
     id: string;
@@ -32,6 +33,15 @@ interface PresetOption {
     name: string;
     description: string;
     patch: Pick<ResumeStyle, "global" | "selectors" | "elements">;
+}
+
+interface QuickOption {
+    id: string;
+    name: string;
+    description: string;
+    scope: Scope;
+    target?: string;
+    patch: StyleObject;
 }
 
 interface ControlConfig {
@@ -132,6 +142,40 @@ const presets: PresetOption[] = [
     { id: "classic", name: "Classic", description: "Traditional black text with crisp dividers.", patch: { global: { backgroundColor: "#ffffff", color: "#111827", fontFamily: "Georgia, serif", fontSize: "14px", lineHeight: 1.5, padding: "10mm" }, selectors: { heading: { color: "#111827", fontWeight: 700, borderBottom: "1px solid #d1d5db", padding: "0 0 4px", margin: "0 0 8px" } }, elements: {} } },
 ];
 
+
+const textSizePresets: QuickOption[] = [
+    { id: "compact", name: "Compact", description: "Smaller text for one-page resumes.", scope: "global", patch: { fontSize: "13px", lineHeight: 1.4 } },
+    { id: "balanced", name: "Balanced", description: "Comfortable default reading size.", scope: "global", patch: { fontSize: "14px", lineHeight: 1.55 } },
+    { id: "large", name: "Large", description: "More readable with bigger text.", scope: "global", patch: { fontSize: "16px", lineHeight: 1.7 } },
+];
+
+const spacingPresets: QuickOption[] = [
+    { id: "tight", name: "Tight", description: "Fit more content on the page.", scope: "global", patch: { padding: "8mm", margin: "0" } },
+    { id: "comfortable", name: "Comfortable", description: "Balanced page breathing room.", scope: "global", patch: { padding: "10mm", margin: "0" } },
+    { id: "airy", name: "Airy", description: "More white space and calm layout.", scope: "global", patch: { padding: "14mm", margin: "0" } },
+];
+
+const headingShapePresets: QuickOption[] = [
+    { id: "simple-title", name: "Simple titles", description: "Clean bold headings without dividers.", scope: "selector", target: "heading", patch: { fontWeight: 700, fontSize: "20px", margin: "0 0 8px", padding: "0" } },
+    { id: "underlined-title", name: "Underlined", description: "Classic section heading divider.", scope: "selector", target: "heading", patch: { fontWeight: 700, fontSize: "18px", borderBottom: "1px solid #d1d5db", padding: "0 0 4px", margin: "0 0 8px" } },
+    { id: "accent-title", name: "Accent titles", description: "Bolder and more visual headings.", scope: "selector", target: "heading", patch: { fontWeight: 800, fontSize: "22px", margin: "0 0 10px" } },
+];
+
+const sectionShapePresets: QuickOption[] = [
+    { id: "flat-section", name: "Flat", description: "Simple resume sections.", scope: "selector", target: "section", patch: { backgroundColor: "transparent", borderRadius: "0px", padding: "0", margin: "0 0 12px" } },
+    { id: "card-section", name: "Soft cards", description: "White cards with rounded corners.", scope: "selector", target: "section", patch: { backgroundColor: "#ffffff", borderRadius: "14px", padding: "14px", margin: "0 0 12px" } },
+    { id: "spacious-section", name: "Spacious", description: "More section spacing and padding.", scope: "selector", target: "section", patch: { padding: "18px", margin: "0 0 16px", borderRadius: "12px" } },
+];
+
+const friendlyGroupName: Record<SmartGroup, string> = {
+    text: "text",
+    image: "image",
+    icon: "icon",
+    layout: "layout",
+    list: "list",
+    listItem: "list item",
+};
+
 const tabs: { key: TabKey; label: string }[] = [
     { key: "theme", label: "Theme" },
     { key: "typography", label: "Typography" },
@@ -156,12 +200,16 @@ const getNumberish = (value: string | number | undefined, fallback: number) => {
 };
 
 const getSmartGroup = (node?: Pick<Schema, "tag" | "type" | "selectorGroup"> | null): SmartGroup => {
-    const value = `${node?.selectorGroup ?? ""} ${node?.type ?? ""} ${node?.tag ?? ""}`.toLowerCase();
-    if (/img|image/.test(value)) return "image";
-    if (/icon|\bi\b/.test(value)) return "icon";
-    if (/ul|ol|list\b/.test(value)) return "list";
-    if (/li|listitem|list-item/.test(value)) return "listItem";
-    if (/section|container|div|layout/.test(value)) return "layout";
+    const tag = (node?.tag ?? "").toLowerCase();
+    const selector = (node?.selectorGroup ?? "").toLowerCase();
+    const type = (node?.type ?? "").toLowerCase();
+    const value = `${selector} ${type} ${tag}`;
+
+    if (["img", "image", "picture"].includes(tag) || /\b(image|photo|avatar|logo)\b/.test(value)) return "image";
+    if (selector === "icon" || type === "icon" || /\b(icon|svg)\b/.test(value)) return "icon";
+    if (["li"].includes(tag) || /\b(listitem|list-item)\b/.test(value) || selector === "listitem" || selector === "list-item") return "listItem";
+    if (["ul", "ol"].includes(tag) || selector === "list" || /\blist\b/.test(value)) return "list";
+    if (["div", "section", "article", "aside", "main", "header", "footer", "nav"].includes(tag) || /\b(section|container|layout|wrapper|block|row|column)\b/.test(value)) return "layout";
     return "text";
 };
 
@@ -180,6 +228,7 @@ export default function StylesPanel() {
     const [selectedColor, setSelectedColor] = useState("modern");
     const [selectedFont, setSelectedFont] = useState("inter");
     const [selectorKey, setSelectorKey] = useState("heading");
+
 
     const nodes = useMemo(() => sections.flatMap((section) => walkSchema(section.schema).map((node) => ({ ...node, sectionName: section.name }))), [sections]);
     const selectedNode = nodes.find((node) => node.id === selectedNodeId);
@@ -210,6 +259,18 @@ export default function StylesPanel() {
         selectors: { ...previous.selectors, ...preset.patch.selectors },
         elements: { ...previous.elements, ...preset.patch.elements },
     }));
+
+    const applyQuickOption = (option: QuickOption) => {
+        if (option.scope === "global") updateGlobal(option.patch);
+        if (option.scope === "selector" && option.target) updateSelector(option.target, option.patch);
+        if (option.scope === "element") updateElement(option.patch);
+    };
+
+    const renderQuickOptions = (options: QuickOption[]) => (
+        <div className="mb-5 grid gap-3 md:grid-cols-3">
+            {options.map((option) => <button key={option.id} onClick={() => applyQuickOption(option)} className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"><p className="font-semibold text-gray-900">{option.name}</p><p className="mt-1 text-sm text-gray-500">{option.description}</p></button>)}
+        </div>
+    );
 
     const applyStyles = () => setStyle((previous) => ({ ...previous, global: draft.global, selectors: draft.selectors, elements: draft.elements, customCSS: previous.customCSS ?? "" }));
     const resetStyles = () => {
@@ -252,13 +313,13 @@ export default function StylesPanel() {
 
             {activeTab === "theme" && <div className="space-y-6"><div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Color schemes</h3><div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">{colorSchemes.map((scheme) => <button key={scheme.id} onClick={() => applyTheme(scheme)} className={`cursor-pointer rounded-xl p-4 text-left transition-all ${selectedColor === scheme.id ? "shadow-lg ring-2 ring-blue-500 ring-offset-2" : "hover:shadow-md"}`} style={{ backgroundColor: scheme.background }}><div className="space-y-2"><div className="flex gap-1"><span className="h-6 w-6 rounded-full" style={{ backgroundColor: scheme.primary }} /><span className="h-6 w-6 rounded-full" style={{ backgroundColor: scheme.secondary }} /><span className="h-6 w-6 rounded-full" style={{ backgroundColor: scheme.accent }} /></div><p className="text-sm font-medium" style={{ color: scheme.text }}>{scheme.name}</p></div></button>)}</div></div><div className="grid gap-4 md:grid-cols-3">{presets.map((preset) => <button key={preset.id} onClick={() => applyPreset(preset)} className="cursor-pointer rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"><p className="font-semibold text-gray-900">{preset.name}</p><p className="mt-1 text-sm text-gray-500">{preset.description}</p></button>)}</div></div>}
 
-            {activeTab === "typography" && <div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Typography</h3><div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">{fontOptions.map((font) => <button key={font.id} onClick={() => { setSelectedFont(font.id); updateGlobal({ fontFamily: font.value }); }} className={`cursor-pointer rounded-lg border p-3 text-left transition-all ${selectedFont === font.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}><p className={`${font.className} font-medium`}>{font.name}</p><p className={`${font.className} mt-1 text-xs text-gray-500`}>The quick brown fox</p></button>)}</div>{renderControls(globalControls.filter((control) => ["fontFamily", "fontSize", "color", "lineHeight"].includes(control.key)), draft.global, updateGlobal)}</div>}
+            {activeTab === "typography" && <div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Typography</h3>{renderQuickOptions(textSizePresets)}<div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">{fontOptions.map((font) => <button key={font.id} onClick={() => { setSelectedFont(font.id); updateGlobal({ fontFamily: font.value }); }} className={`cursor-pointer rounded-lg border p-3 text-left transition-all ${selectedFont === font.id ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}><p className={`${font.className} font-medium`}>{font.name}</p><p className={`${font.className} mt-1 text-xs text-gray-500`}>The quick brown fox</p></button>)}</div>{renderControls(globalControls.filter((control) => ["fontFamily", "fontSize", "color", "lineHeight"].includes(control.key)), draft.global, updateGlobal)}</div>}
 
-            {activeTab === "spacing" && <div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Spacing</h3>{renderControls(globalControls.filter((control) => ["padding", "margin", "backgroundColor"].includes(control.key)), draft.global, updateGlobal)}</div>}
+            {activeTab === "spacing" && <div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Spacing</h3>{renderQuickOptions(spacingPresets)}{renderControls(globalControls.filter((control) => ["padding", "margin", "backgroundColor"].includes(control.key)), draft.global, updateGlobal)}</div>}
 
-            {activeTab === "sections" && <div className="grid gap-6 lg:grid-cols-[280px_1fr]"><div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Element groups</h3><div className="grid gap-2">{selectorGroups.map((group) => <button key={group.key} onClick={() => setSelectorKey(group.key)} title={group.description} className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-sm ${selectorKey === group.key ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}>{group.label}<span className="mt-1 block text-xs opacity-70">{group.description}</span></button>)}</div></div><div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Style all {selectorGroups.find((group) => group.key === selectorKey)?.label}</h3>{renderControls(getControls(selectorGroup), draft.selectors?.[selectorKey] ?? {}, (patch) => updateSelector(selectorKey, patch))}</div></div>}
+            {activeTab === "sections" && <div className="grid gap-6 lg:grid-cols-[280px_1fr]"><div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Design groups</h3><div className="grid gap-2">{selectorGroups.map((group) => <button key={group.key} onClick={() => setSelectorKey(group.key)} title={group.description} className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-sm ${selectorKey === group.key ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"}`}>{group.label}<span className="mt-1 block text-xs opacity-70">{group.description}</span></button>)}</div></div><div className="rounded-xl bg-white p-6 shadow-lg"><h3 className="mb-4 text-lg font-semibold text-gray-900">Style all {selectorGroups.find((group) => group.key === selectorKey)?.label}</h3>{selectorKey === "heading" && renderQuickOptions(headingShapePresets)}{selectorKey === "section" && renderQuickOptions(sectionShapePresets)}{renderControls(getControls(selectorGroup), draft.selectors?.[selectorKey] ?? {}, (patch) => updateSelector(selectorKey, patch))}</div></div>}
 
-            {activeTab === "selected" && <div className="rounded-xl bg-white p-6 shadow-lg"><div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><div><h3 className="text-lg font-semibold text-gray-900">Selected Element</h3><p className="text-sm text-gray-500">{selectedNode ? `Editing only: ${selectedNode.name} (${selectedNode.tag})` : "Click an element in the resume preview to customize it here."}</p></div>{selectedNode && <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">Smart controls: {selectedGroup}</span>}</div>{renderControls(getControls(selectedGroup), draft.elements?.[elementKey] ?? {}, updateElement, !elementKey)}</div>}
+            {activeTab === "selected" && <div className="rounded-xl bg-white p-6 shadow-lg"><div className="mb-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"><div><h3 className="text-lg font-semibold text-gray-900">Selected Element</h3><p className="text-sm text-gray-500">{selectedNode ? `Editing only: ${selectedNode.name} (${selectedNode.tag})` : "Click an element in the resume preview to customize it here."}</p></div>{selectedNode && <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">Best options for this {friendlyGroupName[selectedGroup]}</span>}</div>{renderControls(getControls(selectedGroup), draft.elements?.[elementKey] ?? {}, updateElement, !elementKey)}</div>}
 
             <div className="overflow-hidden rounded-xl bg-white shadow-lg">
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4"><h3 className="text-lg font-semibold text-gray-900">Live Preview</h3></div>
