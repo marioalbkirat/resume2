@@ -1,0 +1,2 @@
+ALTER TABLE "ResumeDraft" ADD COLUMN "schema" JSONB NOT NULL DEFAULT '{}';
+ALTER TABLE "Section" DROP COLUMN "isArchived";

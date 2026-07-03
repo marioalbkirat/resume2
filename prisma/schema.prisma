@@ -100,7 +100,6 @@ model Section {
   visibility Visibility
   authorId   String
   schema     Json
-  isArchived Boolean       @default(false)
   content    Json
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
@@ -115,6 +114,7 @@ model ResumeDraft {
   templateId            String
   title                 String
   content               Json
+  schema                Json
   settings              Json
   distribution          Json
   style                 Json

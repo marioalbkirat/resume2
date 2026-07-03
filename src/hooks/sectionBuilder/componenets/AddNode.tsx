@@ -4,6 +4,7 @@ import { FiPlus } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { createRoot, Root } from 'react-dom/client';
 import { ComponentType, useRef } from 'react';
+import { IconItem } from '@/hooks/PickIcons/icons';
 import { useSectionBuilder } from '../useSectionBuilder';
 export default function AddNode({ node, builder }: { node: Schema; builder: ReturnType<typeof useSectionBuilder> }) {
     const { addNode, allowedTagChildren, getAlias, getTagsWithoutValue } = builder;
@@ -22,7 +23,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
         link: { label: 'Link', icon: '🔗', color: 'bg-teal-50', defaultTag: 'a' },
     };
     const iconRootRef = useRef<Root | null>(null);
-    const IconSelectorRef = useRef<ComponentType<{ onSelect: (icon: { name: string }) => void; selectedIcon: { name: string; component: null; displayName: string } | null; }> | null>(null);
+    const IconSelectorRef = useRef<ComponentType<{ onSelect: (icon: IconItem) => void; selectedIcon?: IconItem | null; className?: string; }> | null>(null);
     const selectedIconValueRef = useRef<string>('FaUser');
     const loadIconSelector = async () => {
         try {
@@ -150,7 +151,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                                     const label = document.querySelector('#icon-selector-container label');
                                     if (label && selectedIconValueRef.current) label.innerHTML = `Selected Icon: <strong style="color: #10b981;">${selectedIconValueRef.current}</strong>`;
                                 }}
-                                selectedIcon={selectedIconValueRef.current ? { name: selectedIconValueRef.current, component: null, displayName: selectedIconValueRef.current } : null}
+                                selectedIcon={undefined}
                             />
                         );
                     }

@@ -69,7 +69,7 @@ export default function TreeNode({ nodeId, level = 0, isRoot = false, builder }:
                     </span>
                     {displayValue && (
                         <span className="text-xs text-gray-400 truncate ml-2">
-                            = "{displayValue.length > 30 ? displayValue.substring(0, 30) + '...' : displayValue}"
+                            = {displayValue.length > 30 ? displayValue.substring(0, 30) + '...' : displayValue}
                         </span>
                     )}
                 </div>
