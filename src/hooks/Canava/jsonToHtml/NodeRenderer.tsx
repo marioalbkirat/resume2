@@ -26,9 +26,19 @@ type NodeRendererProps = {
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
 const contentKeyFor = (node: Schema) => node.id;
 const asCssProperties = (style?: StyleObject) => (style ?? {}) as CSSProperties;
+const selectorKeysFor = (node: Schema) => {
+  const keys = [node.tag, node.selectorGroup];
+  if (node.tag === "i" || node.tag === "svg") keys.push("icon");
+  if (node.tag === "img") keys.push("image");
+  if (node.tag === "li") keys.push("listItem");
+  if (node.tag === "ul" || node.tag === "ol") keys.push("list");
+  if (node.tag === "a") keys.push("link");
+  if (node.tag === "span") keys.push("text");
+  if (node.tag === "div") keys.push("container");
+  return [...new Set(keys.filter(Boolean))];
+};
 const getNodeStyle = (node: Schema, style?: ResumeStyle) => ({
-  ...asCssProperties(style?.selectors?.[node.tag]),
-  ...asCssProperties(style?.selectors?.[node.selectorGroup]),
+  ...selectorKeysFor(node).reduce((acc, key) => ({ ...acc, ...asCssProperties(style?.selectors?.[key]) }), {} as CSSProperties),
   ...asCssProperties(style?.elements?.[node.id]),
 });
 
