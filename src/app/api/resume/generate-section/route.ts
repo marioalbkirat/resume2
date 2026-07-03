@@ -7,6 +7,8 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = process.env.OPENROUTER_MODEL || "cohere/north-mini-code:free";
 const OPENROUTER_TIMEOUT_MS = 55_000;
 
+export const maxDuration = 60;
+
 const ALLOWED_TAGS = ["section", "div", "li", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"] as const;
 const TAG_TYPES: Record<string, string> = {
     a: "link",
@@ -31,12 +33,84 @@ interface GenerateSectionRequest {
     description?: string;
     sectionType?: "resume" | "portfolio";
     additionalRequirements?: string;
+    sectionName?: string;
 }
 
 interface GeneratedPayload {
     schema?: Partial<Schema>;
     content?: Record<string, Content> | Content[];
     explanation?: string;
+}
+
+
+function inferSectionName(description: string, additionalRequirements?: string, sectionName?: string): string {
+    if (sectionName?.trim()) return sectionName.trim();
+
+    const exactNameMatch = additionalRequirements?.match(/exact section name:\s*([^\n.]+)/i);
+    if (exactNameMatch?.[1]?.trim()) return exactNameMatch[1].trim();
+
+    const firstSentence = description.split(/[.\n]/)[0]?.trim();
+    if (!firstSentence) return "Generated Section";
+
+    const cleaned = firstSentence
+        .replace(/^(create|generate|build|make|add)\s+(a|an|the)?\s*/i, "")
+        .replace(/\s+(section|fields?).*$/i, " section")
+        .trim();
+
+    return cleaned ? cleaned[0].toUpperCase() + cleaned.slice(1) : "Generated Section";
+}
+
+function extractFieldNames(description: string): string[] {
+    const candidates = description
+        .replace(/\b(each|with|and|containing|include|including|entries?|section|professional|create|generate|build|make|for|resume|portfolio)\b/gi, ",")
+        .split(/[,;\n]+/)
+        .map((field) => field.trim().replace(/^\d+\s*/, "").replace(/[^a-z0-9 /_-]/gi, "").trim())
+        .filter((field) => field.length >= 3 && field.length <= 40);
+
+    const unique = Array.from(new Set(candidates));
+    return unique.length ? unique.slice(0, 8) : ["Title", "Summary", "Highlights"];
+}
+
+function toFieldName(value: string): string {
+    return value.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "field";
+}
+
+function buildFallbackPayload(description: string, additionalRequirements?: string, sectionName?: string): GeneratedPayload {
+    const title = inferSectionName(description, additionalRequirements, sectionName);
+    const fields = extractFieldNames(description);
+    const content: Record<string, Content> = {};
+
+    const children = fields.map((field) => {
+        const id = crypto.randomUUID();
+        const name = toFieldName(field);
+        content[id] = {
+            id,
+            type: "text",
+            value: field,
+        };
+
+        return {
+            id,
+            name,
+            tag: "span",
+            type: "text",
+            selectorGroup: "span",
+            children: [],
+        };
+    });
+
+    return {
+        schema: {
+            id: crypto.randomUUID(),
+            name: title,
+            tag: "section",
+            type: "section",
+            selectorGroup: "section",
+            children,
+        },
+        content,
+        explanation: "Created a section from your description because the AI provider returned an empty completion.",
+    };
 }
 
 function getAllowedChildren(tag: string): string[] {
@@ -223,7 +297,7 @@ function normalizeContent(schema: Schema, generatedContent: GeneratedPayload["co
 
 export async function POST(request: NextRequest) {
     try {
-        const { description, sectionType = "resume", additionalRequirements }: GenerateSectionRequest = await request.json();
+        const { description, sectionType = "resume", additionalRequirements, sectionName }: GenerateSectionRequest = await request.json();
 
         if (!description?.trim()) {
             return NextResponse.json({ error: "description is required." }, { status: 400 });
@@ -308,8 +382,15 @@ Schema rules:
         const result = await response.json();
         const aiContent = extractMessageContent(result);
         if (!aiContent) {
-            const details = getProviderErrorMessage(result) || "The AI provider returned an empty response. Try again or configure OPENROUTER_MODEL with a model that supports chat completions.";
-            return NextResponse.json({ error: "AI response is missing message content.", details }, { status: 502 });
+            const details = getProviderErrorMessage(result) || "The AI provider returned an empty response.";
+            const fallback = buildFallbackPayload(description, additionalRequirements, sectionName);
+            const fallbackSchema = normalizeSchema({ ...fallback.schema, tag: "section", type: "section", selectorGroup: "section" }, undefined, fallback.schema?.name || "Generated Section");
+            return NextResponse.json({
+                schema: fallbackSchema,
+                content: normalizeContent(fallbackSchema, fallback.content),
+                explanation: `${fallback.explanation} Provider detail: ${details}`,
+                warning: "AI_PROVIDER_EMPTY_RESPONSE",
+            }, { status: 200 });
         }
 
         const generated = extractJson(aiContent);

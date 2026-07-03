@@ -31,6 +31,7 @@ export default function AIGenerateModal({ builder, onClose, sectionName, onGener
             const result = await generator.generateSection({
                 description: description.trim(),
                 sectionType: "resume",
+                sectionName,
                 additionalRequirements: `Return target RESUME and use this exact section name: ${sectionName}.`,
             });
             
