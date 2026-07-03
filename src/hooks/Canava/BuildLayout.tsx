@@ -34,10 +34,20 @@ const findFirstListId = (section: Section): string | null => {
   return null;
 };
 
+const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
+  const safeStyle = { ...globalStyle };
+  const background = safeStyle.background;
+  delete safeStyle.background;
+  delete safeStyle.sidebarBackgroundColor;
+  delete safeStyle.mainBackgroundColor;
+  delete safeStyle.columnBorder;
+  return { safeStyle, background };
+};
+
 export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const pageSizeStyle = useMemo<CSSProperties>(() => {
-    const { background, ...safeStyle } = style?.global ?? {};
+    const { safeStyle, background } = getPageGlobalStyle(style?.global);
     const fallbackBackgroundColor = background === undefined ? undefined : String(background);
 
     return {
@@ -45,12 +55,18 @@ export default function BuildLayout({ sections, settings, distribution, content 
       boxSizing: "border-box",
       width: settings.pageSize === "A4" ? "210mm" : "215.9mm",
       minHeight: settings.pageSize === "A4" ? "297mm" : "279.4mm",
-      padding: "10mm",
+      padding: safeStyle.padding ?? "10mm",
       boxShadow: "0 0 3px rgba(0,0,0,0.2)",
       backgroundColor: String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white"),
       overflow: "visible",
     };
   }, [settings.pageSize, style?.global]);
+
+  const columnStyle = useMemo(() => ({
+    sidebar: { backgroundColor: style?.global?.sidebarBackgroundColor } as CSSProperties,
+    main: { backgroundColor: style?.global?.mainBackgroundColor } as CSSProperties,
+    divider: String(style?.global?.columnBorder ?? ""),
+  }), [style?.global]);
 
   const sortedSections = useMemo(() => [...sections]
     .filter((section) => Boolean(distribution[section.id]) && (distribution[section.id]?.visible ?? true))
@@ -96,8 +112,9 @@ export default function BuildLayout({ sections, settings, distribution, content 
   const left = sortedSections.filter((section) => distribution[section.id]?.position !== "right");
   const right = sortedSections.filter((section) => distribution[section.id]?.position === "right");
   const sidebarLeft = settings.sidebar?.position !== "RIGHT";
-  const sidebar = <aside>{left.map(renderSection)}</aside>;
-  const main = <main>{right.map(renderSection)}</main>;
+  const borderSide = sidebarLeft ? "borderRight" : "borderLeft";
+  const sidebar = <aside style={{ ...columnStyle.sidebar, ...(columnStyle.divider ? { [borderSide]: columnStyle.divider, paddingInlineEnd: sidebarLeft ? "16px" : undefined, paddingInlineStart: sidebarLeft ? undefined : "16px" } : {}) }}>{left.map(renderSection)}</aside>;
+  const main = <main style={columnStyle.main}>{right.map(renderSection)}</main>;
 
   return (
     <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>
