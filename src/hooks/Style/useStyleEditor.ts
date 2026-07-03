@@ -1,6 +1,6 @@
 // src/hooks/Style/useStyleEditor.ts
 import { useState, useEffect, useCallback } from 'react';
-import { Engine } from '@/app/create-resume/page';
+type Engine = { layout: { distribution?: Record<string, { visible?: boolean; order?: number }> } };
 import { SectionStyle } from '@/types/resume/SectionStyle';
 import { Section } from '@/types/resume/Section';
 import { SchemaNode } from '@/types/resume/schemaSection';

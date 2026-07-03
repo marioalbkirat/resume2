@@ -4,12 +4,14 @@ import { Content } from "./Content";
 import { Settings } from "./Settings";
 import { ResumeStyle } from "./ResumeStyle";
 import { Distribution } from "./Distribution";
+import { Schema } from "./Section";
 export interface DraftDB {
     id: string;
     userId: string;
     templateId: string;
     title: string;
-    content: Content;
+    content: Record<string, Content>;
+    schema: Record<string, Schema>;
     style: ResumeStyle;
     settings: Settings;
     distribution: Distribution;

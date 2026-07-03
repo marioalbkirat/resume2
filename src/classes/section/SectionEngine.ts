@@ -9,7 +9,6 @@ export class SectionEngine {
     private authorId?: string;
     public schema: SectionSchema;
     public content: SectionContent;
-    private isArchived: boolean = false;
     private createdAt?: Date;
     private updatedAt?: Date;
     constructor(name: string, target: SectionTarget, visibility: Visibility = "COMMUNITY", authorId?: string) {

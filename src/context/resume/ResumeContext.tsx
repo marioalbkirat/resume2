@@ -6,7 +6,7 @@ import { ResumeStyle } from "@/types/resume/ResumeStyle";
 import { Schema, Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
 import { Content } from "@/types/resume/Content";
-import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useEffect, useCallback } from "react";
+import { createContext, useContext, ReactNode, useState, Dispatch, SetStateAction, useEffect, useCallback, useMemo } from "react";
 
 type BuilderMode = "preview" | "edit";
 
@@ -19,6 +19,7 @@ type ResumeBuilderContextType = {
     content: Record<string, Content>;
     setContent: Dispatch<SetStateAction<Record<string, Content>>>;
     distribution: Distribution;
+    resumeDraftSchema: Record<string, Schema>;
     settings: Settings;
     style: ResumeStyle;
     mode: BuilderMode;
@@ -48,7 +49,7 @@ const templateSettings = (template: ResumeTemplate) => ({ ...defaultSettings, ..
 const templateDistribution = (template: ResumeTemplate, settings: Settings) => normalizeDistribution(template.distribution as Distribution, settings);
 const templateContent = (template: ResumeTemplate) => ({ ...(template.content ?? {}) }) as Record<string, Content>;
 
-const contentKeyFor = (node: Schema) => node.value || node.id;
+const contentKeyFor = (node: Schema) => node.id;
 const makeNodeId = () => `node-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 const cloneListItem = (node: Schema, parentId: string | undefined, content: Record<string, Content>) => {
@@ -62,7 +63,6 @@ const cloneListItem = (node: Schema, parentId: string | undefined, content: Reco
             ...current,
             id: nextId,
             parentId: nextParentId,
-            value: undefined,
             children: (current.children ?? []).map(child => cloneNode(child, nextId)),
         };
     };
@@ -92,6 +92,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [sections, setSections] = useState<Section[]>([]);
     const [content, setContent] = useState<Record<string, Content>>({});
     const [distribution, setDistributionState] = useState<Distribution>({});
+    const resumeDraftSchema = useMemo(() => Object.fromEntries(sections.filter(section => distribution[section.id]).map(section => [section.id, section.schema])), [distribution, sections]);
     const [settings, setSettingsState] = useState<Settings>(defaultSettings);
     const [style, setStyle] = useState<ResumeStyle>(defaultStyle);
     const [mode, setMode] = useState<BuilderMode>("edit");
@@ -204,7 +205,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
 
     const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
 
-    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, sections, setSections, content, setContent, distribution, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, toggleMode, activateTemplate, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
+    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, toggleMode, activateTemplate, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
 }
 
 export function useResumeBuilder() { const context = useContext(ResumeBuilderContext); if (!context) throw new Error("useResumeBuilder must be used inside ResumeBuilderProvider"); return context; }

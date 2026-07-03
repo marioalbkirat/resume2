@@ -22,7 +22,7 @@ type NodeRendererProps = {
 };
 
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
-const contentKeyFor = (node: Schema) => (node as Schema & { value?: string }).value || node.id;
+const contentKeyFor = (node: Schema) => node.id;
 
 export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode }: NodeRendererProps) {
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;

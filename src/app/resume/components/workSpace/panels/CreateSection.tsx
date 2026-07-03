@@ -27,7 +27,7 @@ export default function CreateSection({ isOpen, onClose, sectionName, initialSch
     const handleSave = async () => {
         setSaving(true);
         try {
-            const created = await createSection({ name: sectionName.trim(), visibility: "PRIVATE", target: "RESUME", schema: { ...builderData.schema, name: sectionName.trim() }, content: builderData.content, isArchived: false });
+            const created = await createSection({ name: sectionName.trim(), visibility: "PRIVATE", target: "RESUME", schema: { ...builderData.schema, name: sectionName.trim() }, content: builderData.content });
             onSave(created);
             onClose();
         } finally {

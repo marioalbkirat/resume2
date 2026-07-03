@@ -8,6 +8,7 @@ import { useMemo, useState, useCallback } from "react";
 interface UseSectionBuilderProps { 
     initialSchema?: Schema; 
     initialContent?: Record<string, Content>; 
+    sectionName?: string;
 }
 
 interface UseSectionBuilderReturn {
@@ -30,12 +31,12 @@ interface UseSectionBuilderReturn {
     resetBuilder: (newSchema?: Schema, newContent?: Record<string, Content>) => void;
 }
 
-export function useSectionBuilder({ initialSchema, initialContent = {} }: UseSectionBuilderProps = {}): UseSectionBuilderReturn {
+export function useSectionBuilder({ initialSchema, initialContent = {}, sectionName = "Untitled" }: UseSectionBuilderProps = {}): UseSectionBuilderReturn {
     const [schema, setSchema] = useState<Schema>(() => initialSchema ?? { 
         id: crypto.randomUUID(), 
         tag: "section", 
         type: "section", 
-        name: "Untitled", 
+        name: sectionName, 
         selectorGroup: "section", 
         children: [] 
     });
@@ -179,13 +180,13 @@ export function useSectionBuilder({ initialSchema, initialContent = {} }: UseSec
                 id: crypto.randomUUID(),
                 tag: "section",
                 type: "section",
-                name: "Untitled",
+                name: sectionName,
                 selectorGroup: "section",
                 children: []
             });
         }
         setContent(newContent ?? {});
-    }, []);
+    }, [sectionName]);
 
     return {
         schema,

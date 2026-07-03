@@ -7,9 +7,11 @@ import { useSectionBuilder } from '../useSectionBuilder';
 interface AIGenerateModalProps { 
     builder: ReturnType<typeof useSectionBuilder>; 
     onClose?: () => void; 
+    sectionName: string;
+    onGenerated?: () => void;
 }
 
-export default function AIGenerateModal({ builder, onClose }: AIGenerateModalProps) {
+export default function AIGenerateModal({ builder, onClose, sectionName, onGenerated }: AIGenerateModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [description, setDescription] = useState('');
     const generator = new AISectionGenerator();
@@ -29,6 +31,7 @@ export default function AIGenerateModal({ builder, onClose }: AIGenerateModalPro
             const result = await generator.generateSection({
                 description: description.trim(),
                 sectionType: "resume",
+                additionalRequirements: `Return target RESUME and use this exact section name: ${sectionName}.`,
             });
             
             // التأكد من أن content هو Record وليس Array
@@ -36,7 +39,8 @@ export default function AIGenerateModal({ builder, onClose }: AIGenerateModalPro
                 ? Object.fromEntries(result.content.map(item => [item.id, item]))
                 : result.content;
 
-            builder.resetBuilder(result.schema, contentRecord);
+            builder.resetBuilder({ ...result.schema, name: sectionName }, contentRecord);
+            onGenerated?.();
             
             Swal.fire({
                 icon: 'success',
@@ -74,7 +78,7 @@ export default function AIGenerateModal({ builder, onClose }: AIGenerateModalPro
                 <div className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Describe your section *
+                            Describe your section and fields *
                         </label>
                         <textarea
                             value={description}
@@ -113,7 +117,7 @@ export default function AIGenerateModal({ builder, onClose }: AIGenerateModalPro
                     <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                         <p className="text-sm text-blue-700 flex items-center gap-2">
                             <span>💡</span>
-                            <span>Example: "Create a skills section with categories: Programming Languages, Frameworks, and Tools, each with a list of items."</span>
+                            <span>Example: Create a skills section with categories: Programming Languages, Frameworks, and Tools, each with a list of items.</span>
                         </p>
                     </div>
                 </div>
