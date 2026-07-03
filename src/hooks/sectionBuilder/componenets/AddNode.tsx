@@ -3,7 +3,7 @@ import { Schema } from '@/types/resume/Section';
 import { FiPlus } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { createRoot, Root } from 'react-dom/client';
-import { useRef } from 'react';
+import { ComponentType, useRef } from 'react';
 import { useSectionBuilder } from '../useSectionBuilder';
 export default function AddNode({ node, builder }: { node: Schema; builder: ReturnType<typeof useSectionBuilder> }) {
     const { addNode, allowedTagChildren, getAlias, getTagsWithoutValue } = builder;
@@ -22,7 +22,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
         link: { label: 'Link', icon: '🔗', color: 'bg-teal-50', defaultTag: 'a' },
     };
     const iconRootRef = useRef<Root | null>(null);
-    const IconSelectorRef = useRef<any>(null);
+    const IconSelectorRef = useRef<ComponentType<{ onSelect: (icon: { name: string }) => void; selectedIcon: { name: string; component: null; displayName: string } | null; }> | null>(null);
     const selectedIconValueRef = useRef<string>('FaUser');
     const loadIconSelector = async () => {
         try {
@@ -89,6 +89,13 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                         placeholder="Enter default value"
                     />
                 </div>
+                <div id="icon-role-container" style="margin-bottom: 16px; display: ${selectedType === 'icon' ? 'block' : 'none'};">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Icon Role</label>
+                    <select id="swal-icon-role" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-sizing: border-box; font-size: 14px;">
+                        <option value="default">Default icon</option>
+                        <option value="sectionIcon">Section title icon</option>
+                    </select>
+                </div>
                 <div id="icon-selector-container" style="margin-bottom: 16px; display: ${selectedType === 'icon' ? 'block' : 'none'}; min-height: 200px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Select Icon</label>
                     <div id="loading-indicator" style="display: none; text-align: center; padding: 20px; color: #6b7280;">
@@ -138,7 +145,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                         iconRootRef.current = createRoot(container);
                         iconRootRef.current.render(
                             <IconSelectorRef.current
-                                onSelect={(icon: any) => {
+                                onSelect={(icon: { name: string }) => {
                                     selectedIconValueRef.current = icon.name;
                                     const label = document.querySelector('#icon-selector-container label');
                                     if (label && selectedIconValueRef.current) label.innerHTML = `Selected Icon: <strong style="color: #10b981;">${selectedIconValueRef.current}</strong>`;
@@ -171,14 +178,17 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                     const valueInput = document.getElementById('swal-value') as HTMLInputElement;
                     const defaultTag = info.defaultTag;
                     const iconContainer = document.getElementById('icon-selector-container');
+                    const iconRoleContainer = document.getElementById('icon-role-container');
                     if (type === 'icon') {
                         iconContainer!.style.display = 'block';
+                        iconRoleContainer!.style.display = 'block';
                         selectedIconValueRef.current = 'FaUser';
                         const label = document.querySelector('#icon-selector-container label');
                         if (label) label.innerHTML = 'Select Icon';
                         setTimeout(() => renderIconSelector(), 100);
                     } else {
                         iconContainer!.style.display = 'none';
+                        iconRoleContainer!.style.display = 'none';
                         if (iconRootRef.current) {
                             iconRootRef.current.unmount();
                             iconRootRef.current = null;
@@ -277,13 +287,15 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                 if (selectedType === 'image') props = { src: '/images/user-photo.avif', alt: 'Image' };
                 if (selectedType === 'link') props = { href: 'https://example.com' };
 
-                return { type: selectedType, name: finalName, value, tag, props };
+                const role = selectedType === 'icon' ? ((document.getElementById('swal-icon-role') as HTMLSelectElement)?.value as 'default' | 'sectionIcon') || 'default' : undefined;
+
+                return { type: selectedType, name: finalName, value, tag, props, role };
             }
         });
 
         if (result.isConfirmed && result.value) {
-            const { type, name, value, tag, props } = result.value;
-            addNode(tag, type, name, node.id, value, props);
+            const { type, name, value, tag, props, role } = result.value;
+            addNode(tag, type, name, node.id, value, props, role);
         }
     };
     return (

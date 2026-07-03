@@ -17,23 +17,11 @@ export default function UpdateNode({
     const FIXED_NAME_TYPES = ['container', 'list', 'listItem', 'image', 'icon', 'link'];
     const USER_NAME_TYPES = ['heading', 'text', 'paragraph'];
 
-    const typeOptions: Record<string, { label: string; icon: string; color: string; defaultTag: string }> = {
-        heading: { label: 'Heading', icon: 'H', color: 'bg-blue-50', defaultTag: 'h2' },
-        text: { label: 'Text', icon: 'T', color: 'bg-gray-50', defaultTag: 'span' },
-        paragraph: { label: 'Paragraph', icon: '¶', color: 'bg-gray-50', defaultTag: 'p' },
-        image: { label: 'Image', icon: '🖼', color: 'bg-green-50', defaultTag: 'img' },
-        icon: { label: 'Icon', icon: '⭐', color: 'bg-yellow-50', defaultTag: 'i' },
-        list: { label: 'List', icon: '📋', color: 'bg-indigo-50', defaultTag: 'ul' },
-        listItem: { label: 'List Item', icon: '•', color: 'bg-indigo-50', defaultTag: 'li' },
-        section: { label: 'Section', icon: '📁', color: 'bg-purple-50', defaultTag: 'section' },
-        container: { label: 'Container', icon: '📦', color: 'bg-teal-50', defaultTag: 'div' },
-        link: { label: 'Link', icon: '🔗', color: 'bg-teal-50', defaultTag: 'a' },
-    };
+
 
     const showForm = async () => {
         const tagsWithoutValue = getTagsWithoutValue();
         const currentType = node.type;
-        const info = typeOptions[currentType];
         const content = getContent(node.id);
         
         let displayValue = content?.value || '';
@@ -74,6 +62,16 @@ export default function UpdateNode({
                             <option value="h4" ${node.tag === 'h4' ? 'selected' : ''}>h4</option>
                             <option value="h5" ${node.tag === 'h5' ? 'selected' : ''}>h5</option>
                             <option value="h6" ${node.tag === 'h6' ? 'selected' : ''}>h6</option>
+                        </select>
+                    </div>
+                ` : ''}
+
+                ${currentType === 'icon' ? `
+                    <div style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Icon Role</label>
+                        <select id="swal-icon-role" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-sizing: border-box; font-size: 14px;">
+                            <option value="default" ${node.role !== 'sectionIcon' ? 'selected' : ''}>Default icon</option>
+                            <option value="sectionIcon" ${node.role === 'sectionIcon' ? 'selected' : ''}>Section title icon</option>
                         </select>
                     </div>
                 ` : ''}
@@ -136,7 +134,7 @@ export default function UpdateNode({
             preConfirm: () => {
                 let name = (document.getElementById('swal-name') as HTMLInputElement)?.value.trim();
                 let value = (document.getElementById('swal-value') as HTMLInputElement)?.value || '';
-                let tag = (document.getElementById('swal-tag') as HTMLSelectElement)?.value || node.tag;
+                const tag = (document.getElementById('swal-tag') as HTMLSelectElement)?.value || node.tag;
 
                 if (FIXED_NAME_TYPES.includes(currentType)) {
                     name = currentType;
@@ -159,15 +157,17 @@ export default function UpdateNode({
                     return false;
                 }
 
-                return { name, value, tag };
+                const role = currentType === 'icon' ? ((document.getElementById('swal-icon-role') as HTMLSelectElement)?.value as 'default' | 'sectionIcon') || 'default' : undefined;
+
+                return { name, value, tag, role };
             }
         });
 
         if (result.isConfirmed && result.value) {
-            const { name, value, tag } = result.value;
+            const { name, value, tag, role } = result.value;
             
             // تحديث الـ Schema
-            updateNode(node.id, tag, name);
+            updateNode(node.id, tag, name, role);
             
             // تحديث الـ Content إذا كان هناك قيمة
             if (value !== undefined) {

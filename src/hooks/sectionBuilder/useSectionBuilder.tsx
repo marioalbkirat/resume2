@@ -13,9 +13,9 @@ interface UseSectionBuilderProps {
 interface UseSectionBuilderReturn {
     schema: Schema;
     content: Record<string, Content>;
-    addNode: (tag: string, type: string, name: string, parentId: string, value?: string, props?: Record<string, string>) => void;
+    addNode: (tag: string, type: string, name: string, parentId: string, value?: string, props?: Record<string, string>, role?: "default" | "sectionIcon") => void;
     deleteNode: (id: string) => void;
-    updateNode: (id: string, tag?: string, name?: string) => void;
+    updateNode: (id: string, tag?: string, name?: string, role?: "default" | "sectionIcon") => void;
     updateContent: (nodeId: string, value: string, props?: Record<string, string>) => void;
     getNode: (id: string) => Schema | null;
     getContent: (nodeId: string) => Content | null;
@@ -44,9 +44,9 @@ export function useSectionBuilder({ initialSchema, initialContent = {} }: UseSec
     const schemaControl = useMemo(() => new SectionSchema(), []);
     const contentControl = useMemo(() => new SectionContent(), []);
 
-    const addNode = useCallback((tag: string, type: string, name: string, parentId: string, value?: string, props?: Record<string, string>) => {
+    const addNode = useCallback((tag: string, type: string, name: string, parentId: string, value?: string, props?: Record<string, string>, role: "default" | "sectionIcon" = "default") => {
         const schemaCopy = JSON.parse(JSON.stringify(schema));
-        const result = schemaControl.addNode(schemaCopy, tag, name, parentId);
+        const result = schemaControl.addNode(schemaCopy, tag, name, parentId, role);
         if (!result) return;
         
         const { section, child } = result;
@@ -89,10 +89,10 @@ export function useSectionBuilder({ initialSchema, initialContent = {} }: UseSec
         }
     }, [schema, schemaControl, contentControl]);
 
-    const updateNode = useCallback((id: string, tag?: string, name?: string) => {
+    const updateNode = useCallback((id: string, tag?: string, name?: string, role?: "default" | "sectionIcon") => {
         setSchema(prevSchema => {
             const schemaCopy = JSON.parse(JSON.stringify(prevSchema));
-            const result = schemaControl.updateNode(schemaCopy, id, tag, name);
+            const result = schemaControl.updateNode(schemaCopy, id, tag, name, role);
             return result ?? prevSchema;
         });
     }, [schemaControl]);
