@@ -12,7 +12,7 @@ const CURRENT_USER_ID = "cmqtlhdub0000t9rselto3b16";
 const iconFor = (name: string) => name.toLowerCase().includes("education") ? "🎓" : name.toLowerCase().includes("experience") ? "💼" : name.toLowerCase().includes("skill") ? "⚡" : "📄";
 
 export default function SectionsPanel() {
-    const { sections, setSections, distribution, settings, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, setDistribution } = useResumeBuilder();
+    const { sections, setSections, distribution, settings, setContent, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, setDistribution } = useResumeBuilder();
     const [newSectionName, setNewSectionName] = useState("");
     const [draggedSection, setDraggedSection] = useState<string | null>(null);
     const [showCreateSection, setShowCreateSection] = useState(false);
@@ -39,7 +39,7 @@ export default function SectionsPanel() {
         setShowDuplicateDialog(false);
         setShowCreateSection(true);
     };
-    const handleSaved = (section: Section) => { setSections(prev => [section, ...prev]); addSectionToDistribution(section.id); setNewSectionName(""); setDuplicateSource(null); setDuplicateName(""); };
+    const handleSaved = (section: Section) => { setSections(prev => [section, ...prev]); setContent(prev => ({ ...prev, ...((section.content ?? {}) as Record<string, Content>) })); addSectionToDistribution(section.id); setNewSectionName(""); setDuplicateSource(null); setDuplicateName(""); };
     const gallery = useMemo(() => ({
         OFFICIAL: sections.filter(s => s.visibility === "OFFICIAL" && s.authorId !== CURRENT_USER_ID),
         COMMUNITY: sections.filter(s => s.visibility === "COMMUNITY" && s.authorId !== CURRENT_USER_ID),
