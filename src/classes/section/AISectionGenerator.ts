@@ -9,6 +9,7 @@ export interface AIGenerateRequest {
     description: string;
     sectionType?: 'resume' | 'portfolio';
     additionalRequirements?: string;
+    sectionName?: string;
 }
 
 export interface AIGenerateResponse {
