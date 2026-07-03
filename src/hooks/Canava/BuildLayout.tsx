@@ -43,7 +43,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
   }), [settings.pageSize]);
 
   const sortedSections = useMemo(() => [...sections]
-    .filter((section) => distribution[section.id]?.visible ?? true)
+    .filter((section) => Boolean(distribution[section.id]) && (distribution[section.id]?.visible ?? true))
     .sort((a, b) => (distribution[a.id]?.order ?? 9999) - (distribution[b.id]?.order ?? 9999)), [sections, distribution]);
 
   const renderSection = (section: Section) => {
@@ -52,7 +52,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
     return (
       <section key={section.id} className="resume-section group mb-5 break-inside-avoid" data-section-id={section.id}>
         {isEditable && (
-          <div className="mb-2 flex items-center justify-between rounded border border-dashed border-gray-300 bg-gray-50 px-2 py-1 text-xs text-gray-600 print:hidden">
+          <div className="mb-2 flex items-center justify-between bg-transparent px-0 py-1 text-xs text-gray-600 print:hidden">
             <span>{config?.showIcon && settings.showIcons ? "📁 " : ""}{section.name}</span>
             {listId && (
               <button type="button" onClick={() => onListItemAdd?.(section.id, listId)} className="inline-flex items-center gap-1 rounded bg-green-600 px-2 py-1 text-white hover:bg-green-700" title={`Add ${section.name} item`}>
