@@ -43,9 +43,19 @@ type ProviderProps = { children: ReactNode; };
 const defaultSettings: Settings = { fileName: "My_Resume", direction: "LTR", pageSize: "A4", showIcons: true, columns: "TWO", sidebar: { position: "LEFT" } };
 const defaultStyle: ResumeStyle = { global: {}, selectors: {}, elements: {}, customCSS: "" };
 const normalizeDistribution = (distribution: Distribution, settings: Settings) => Object.fromEntries(Object.entries(distribution ?? {}).map(([id, item], index) => [id, { order: item?.order ?? index, position: settings.columns === "TWO" ? item?.position === "right" ? "right" : "left" : "FULL", visible: item?.visible ?? true, showIcon: item?.showIcon ?? true }])) as Distribution;
-const templateSettings = (template: ResumeTemplate) => template.settings as Settings;
+const templateSettings = (template: ResumeTemplate) => ({ ...defaultSettings, ...(template.settings as Partial<Settings>), sidebar: { ...defaultSettings.sidebar, ...((template.settings as Partial<Settings>)?.sidebar ?? {}) } }) as Settings;
 const templateDistribution = (template: ResumeTemplate, settings: Settings) => normalizeDistribution(template.distribution as Distribution, settings);
 const templateContent = (template: ResumeTemplate) => ({ ...(template.content ?? {}) }) as Record<string, Content>;
+const mergeSectionContent = (sections: Section[], distribution: Distribution, currentContent: Record<string, Content>) => {
+    const next = { ...currentContent };
+    sections.forEach((section) => {
+        if (!distribution[section.id]) return;
+        Object.entries((section.content ?? {}) as Record<string, Content>).forEach(([key, value]) => {
+            if (!next[key]) next[key] = value;
+        });
+    });
+    return next;
+};
 
 export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [selectedResume, setSelectedResume] = useState<ResumeTemplate | null>(null);
@@ -59,21 +69,27 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
     const setDistribution: Dispatch<SetStateAction<Distribution>> = useCallback((value) => setDistributionState(prev => typeof value === "function" ? (value as (previous: Distribution) => Distribution)(prev) : value), []);
-    const setSettings: Dispatch<SetStateAction<Settings>> = useCallback((value) => setSettingsState(prev => typeof value === "function" ? (value as (previous: Settings) => Settings)(prev) : value), []);
+    const setSettings: Dispatch<SetStateAction<Settings>> = useCallback((value) => setSettingsState(prev => {
+        const next = typeof value === "function" ? (value as (previous: Settings) => Settings)(prev) : value;
+        setDistributionState(current => normalizeDistribution(current, next));
+        return next;
+    }), []);
 
     const activateTemplate = useCallback((template: ResumeTemplate) => {
         const nextSettings = templateSettings(template);
         setSelectedResume(template);
         setSettingsState(nextSettings);
-        setDistributionState(templateDistribution(template, nextSettings));
+        const nextDistribution = templateDistribution(template, nextSettings);
+        setDistributionState(nextDistribution);
         setStyle((template.style as ResumeStyle) ?? defaultStyle);
-        setContent(templateContent(template));
+        setContent(mergeSectionContent(sections, nextDistribution, templateContent(template)));
         setSelectedNodeId(null);
-    }, []);
+    }, [sections]);
 
     const startBlankDraft = useCallback((nextSettings: Settings, nextDistribution: Distribution) => {
-        setSelectedResume(null); setSettingsState(nextSettings); setDistributionState(normalizeDistribution(nextDistribution, nextSettings)); setStyle(defaultStyle); setContent({}); setSelectedNodeId(null);
-    }, []);
+        const normalizedDistribution = normalizeDistribution(nextDistribution, nextSettings);
+        setSelectedResume(null); setSettingsState(nextSettings); setDistributionState(normalizedDistribution); setStyle(defaultStyle); setContent(mergeSectionContent(sections, normalizedDistribution, {})); setSelectedNodeId(null);
+    }, [sections]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -88,16 +104,25 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
                     const nextSettings = templateSettings(first);
                     setSelectedResume(first);
                     setSettingsState(nextSettings);
-                    setDistributionState(templateDistribution(first, nextSettings));
+                    const nextDistribution = templateDistribution(first, nextSettings);
+                    setDistributionState(nextDistribution);
                     setStyle((first.style as ResumeStyle) ?? defaultStyle);
-                    setContent(templateContent(first));
+                    setContent(mergeSectionContent(loadedSections, nextDistribution, templateContent(first)));
                 }
             }
         };
         fetchInitialData();
     }, []);
 
-    const addSectionToDistribution = useCallback((sectionId: string) => setDistributionState(prev => prev[sectionId] ? prev : { ...prev, [sectionId]: { order: Object.keys(prev).length, position: settings.columns === "TWO" ? "left" : "FULL", visible: true, showIcon: true } }), [settings.columns]);
+    const addSectionToDistribution = useCallback((sectionId: string) => {
+        setDistributionState(prev => {
+            if (prev[sectionId]) return prev;
+            const next = { ...prev, [sectionId]: { order: Object.keys(prev).length, position: settings.columns === "TWO" ? "left" : "FULL", visible: true, showIcon: true } } as Distribution;
+            const section = sections.find(item => item.id === sectionId);
+            if (section) setContent(current => mergeSectionContent([section], next, current));
+            return next;
+        });
+    }, [sections, settings.columns]);
     const removeSectionFromDistribution = useCallback((sectionId: string) => setDistributionState(prev => { const next = { ...prev }; delete next[sectionId]; return Object.fromEntries(Object.entries(next).sort((a, b) => a[1].order - b[1].order).map(([id, item], index) => [id, { ...item, order: index }])) as Distribution; }), []);
     const updateDistributionItem = useCallback((sectionId: string, patch: Partial<Distribution[string]>) => setDistributionState(prev => prev[sectionId] ? { ...prev, [sectionId]: { ...prev[sectionId], ...patch } } : prev), []);
     const updateContent = useCallback((_sectionId: string, nodeId: string, value: string, props?: Record<string, string>) => setContent(prev => ({ ...prev, [nodeId]: { id: nodeId, type: prev[nodeId]?.type ?? "text", value, prop: props ?? prev[nodeId]?.prop } })), []);
