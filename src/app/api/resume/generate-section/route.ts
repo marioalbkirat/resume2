@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = "cohere/north-mini-code:free";
+const MODEL = process.env.OPENROUTER_MODEL || "cohere/north-mini-code:free";
+const OPENROUTER_TIMEOUT_MS = 55_000;
 
 const ALLOWED_TAGS = ["section", "div", "li", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"] as const;
 const TAG_TYPES: Record<string, string> = {
@@ -47,6 +48,45 @@ function getAllowedChildren(tag: string): string[] {
     if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return ["span", "img", "i", "a"];
     if (tag === "a") return ["span", "img", "i"];
     return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
+}
+
+
+function getProviderErrorMessage(result: unknown): string | undefined {
+    if (!result || typeof result !== "object") return undefined;
+
+    const error = (result as { error?: unknown }).error;
+    if (typeof error === "string") return error;
+    if (error && typeof error === "object") {
+        const message = (error as { message?: unknown }).message;
+        if (typeof message === "string" && message.trim()) return message;
+    }
+
+    const choice = (result as { choices?: Array<{ finish_reason?: unknown; native_finish_reason?: unknown }> }).choices?.[0];
+    const finishReason = choice?.finish_reason ?? choice?.native_finish_reason;
+    return typeof finishReason === "string" && finishReason !== "stop" ? `Provider finished without content (${finishReason}).` : undefined;
+}
+
+function extractMessageContent(result: unknown): string | undefined {
+    const content = (result as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message?.content;
+
+    if (typeof content === "string" && content.trim()) return content;
+
+    if (Array.isArray(content)) {
+        const text = content
+            .map((part) => {
+                if (typeof part === "string") return part;
+                if (part && typeof part === "object") {
+                    const text = (part as { text?: unknown; content?: unknown }).text ?? (part as { text?: unknown; content?: unknown }).content;
+                    return typeof text === "string" ? text : "";
+                }
+                return "";
+            })
+            .join("\n")
+            .trim();
+        if (text) return text;
+    }
+
+    return undefined;
 }
 
 function extractJson(text: string): GeneratedPayload {
@@ -193,6 +233,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "OPENROUTER_API_KEY is not configured." }, { status: 500 });
         }
 
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS);
+
         const response = await fetch(OPENROUTER_API_URL, {
             method: "POST",
             headers: {
@@ -201,8 +244,10 @@ export async function POST(request: NextRequest) {
                 "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
                 "X-Title": "generate resume section",
             },
+            signal: controller.signal,
             body: JSON.stringify({
                 model: MODEL,
+                response_format: { type: "json_object" },
                 messages: [
                     {
                         role: "system",
@@ -253,7 +298,7 @@ Schema rules:
                 ],
                 max_tokens: 5000,
             }),
-        });
+        }).finally(() => clearTimeout(timeout));
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -261,9 +306,10 @@ Schema rules:
         }
 
         const result = await response.json();
-        const aiContent = result?.choices?.[0]?.message?.content;
-        if (typeof aiContent !== "string") {
-            return NextResponse.json({ error: "AI response is missing message content." }, { status: 502 });
+        const aiContent = extractMessageContent(result);
+        if (!aiContent) {
+            const details = getProviderErrorMessage(result) || "The AI provider returned an empty response. Try again or configure OPENROUTER_MODEL with a model that supports chat completions.";
+            return NextResponse.json({ error: "AI response is missing message content.", details }, { status: 502 });
         }
 
         const generated = extractJson(aiContent);
@@ -276,6 +322,10 @@ Schema rules:
 
         return NextResponse.json({ schema, content, explanation: generated.explanation }, { status: 200 });
     } catch (error) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : "AI generation failed." }, { status: 400 });
+        const message = error instanceof Error && error.name === "AbortError"
+            ? "AI provider request timed out. Try again or configure OPENROUTER_MODEL with a faster model."
+            : error instanceof Error ? error.message : "AI generation failed.";
+        const status = error instanceof Error && error.name === "AbortError" ? 504 : 400;
+        return NextResponse.json({ error: message }, { status });
     }
 }

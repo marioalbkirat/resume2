@@ -37,11 +37,20 @@ export class AISectionGenerator {
                 body: JSON.stringify(request),
             });
 
+            const data = await response.json().catch(() => null);
+
             if (!response.ok) {
-                throw new Error(`AI generation failed: ${response.statusText}`);
+                const message = data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
+                    ? data.details && typeof data.details === 'string'
+                        ? `${data.error} ${data.details}`
+                        : data.error
+                    : response.statusText;
+                throw new Error(`AI generation failed: ${message}`);
             }
 
-            const data = await response.json();
+            if (!data) {
+                throw new Error('AI generation failed: empty server response');
+            }
             return data as AIGenerateResponse;
         } catch (error) {
             console.error('AI Generation error:', error);
