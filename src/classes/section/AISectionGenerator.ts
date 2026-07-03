@@ -3,6 +3,8 @@
 import { Schema } from "@/types/resume/Section";
 import { Content } from "@/types/resume/Content";
 
+export type GeneratedContent = Record<string, Content> | Content[];
+
 export interface AIGenerateRequest {
     description: string;
     sectionType?: 'resume' | 'portfolio';
@@ -11,14 +13,14 @@ export interface AIGenerateRequest {
 
 export interface AIGenerateResponse {
     schema: Schema;
-    content: Content[];
+    content: GeneratedContent;
     explanation?: string;
 }
 
 export class AISectionGenerator {
     private apiEndpoint: string;
 
-    constructor(apiEndpoint: string = '/api/ai/generate-section') {
+    constructor(apiEndpoint: string = '/api/resume/generate-section') {
         this.apiEndpoint = apiEndpoint;
     }
 
@@ -50,7 +52,7 @@ export class AISectionGenerator {
     /**
      * توليد قسم باستخدام قالب محدد
      */
-    async generateFromTemplate(templateId: string, customizations?: Record<string, any>): Promise<AIGenerateResponse> {
+    async generateFromTemplate(templateId: string, customizations?: Record<string, unknown>): Promise<AIGenerateResponse> {
         return this.generateSection({
             description: `Generate section using template ${templateId}`,
             additionalRequirements: JSON.stringify(customizations),
