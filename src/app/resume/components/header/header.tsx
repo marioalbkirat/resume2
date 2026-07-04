@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { FiDownload, FiUpload, FiSave, FiLink, FiGrid, FiFileText, FiEdit3, FiEye } from "react-icons/fi";
+import { FiDownload, FiUpload, FiSave, FiLink, FiGrid, FiFileText, FiEdit3, FiEye, FiLayers } from "react-icons/fi";
 import { useResumeBuilder } from "@/context/resume/ResumeContext";
 
 export default function ResumeHeader() {
-    const { mode, setMode } = useResumeBuilder();
+    const { mode, setMode, pageCount } = useResumeBuilder();
     const isEdit = mode === "edit";
 
     return (
@@ -15,6 +15,10 @@ export default function ResumeHeader() {
                 <div><h1 className="text-lg font-bold text-slate-800">Resume Builder</h1><p className="text-xs text-slate-500">Professional CV Manager</p></div>
             </div>
             <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700 shadow-sm" title="Current resume page count">
+                    <FiLayers className="w-4 h-4" />
+                    <span>{pageCount} {pageCount === 1 ? "page" : "pages"}</span>
+                </div>
                 <div className="flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm" aria-label="Resume mode selector">
                     <button type="button" onClick={() => setMode("edit")} className={`cursor-pointer flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${isEdit ? "bg-blue-600 text-white shadow" : "text-slate-600 hover:bg-blue-50 hover:text-blue-600"}`} aria-pressed={isEdit}><FiEdit3 className="w-4 h-4" />Edit</button>
                     <button type="button" onClick={() => setMode("preview")} className={`cursor-pointer flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${!isEdit ? "bg-indigo-600 text-white shadow" : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"}`} aria-pressed={!isEdit}><FiEye className="w-4 h-4" />Preview</button>

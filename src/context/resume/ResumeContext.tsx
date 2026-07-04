@@ -24,6 +24,8 @@ type ResumeBuilderContextType = {
     style: ResumeStyle;
     mode: BuilderMode;
     selectedNodeId: string | null;
+    pageCount: number;
+    setPageCount: Dispatch<SetStateAction<number>>;
     setDistribution: Dispatch<SetStateAction<Distribution>>;
     setSettings: Dispatch<SetStateAction<Settings>>;
     setStyle: Dispatch<SetStateAction<ResumeStyle>>;
@@ -97,6 +99,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [style, setStyle] = useState<ResumeStyle>(defaultStyle);
     const [mode, setMode] = useState<BuilderMode>("edit");
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [pageCount, setPageCount] = useState(1);
 
     const setDistribution: Dispatch<SetStateAction<Distribution>> = useCallback((value) => setDistributionState(prev => typeof value === "function" ? (value as (previous: Distribution) => Distribution)(prev) : value), []);
     const setSettings: Dispatch<SetStateAction<Settings>> = useCallback((value) => setSettingsState(prev => {
@@ -205,7 +208,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
 
     const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
 
-    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, toggleMode, activateTemplate, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
+    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
 }
 
 export function useResumeBuilder() { const context = useContext(ResumeBuilderContext); if (!context) throw new Error("useResumeBuilder must be used inside ResumeBuilderProvider"); return context; }
