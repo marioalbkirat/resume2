@@ -49,6 +49,37 @@ const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
   return { safeStyle, background, padding };
 };
 
+const parseMillimeterValue = (value: unknown) => {
+  const parsed = Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSize: Settings["pageSize"]) => {
+  const pageWidth = pageSize === "A4" ? 210 : 215.9;
+  const minimumColumnWidth = 40;
+  const fallbackLeftWidth = pageSize === "A4" ? 70 : 72;
+  const rawLeftWidth = parseMillimeterValue(globalStyle?.leftColumnWidth);
+  const rawRightWidth = parseMillimeterValue(globalStyle?.rightColumnWidth);
+
+  let leftWidth = rawLeftWidth && rawLeftWidth >= minimumColumnWidth ? rawLeftWidth : fallbackLeftWidth;
+  let rightWidth = rawRightWidth && rawRightWidth >= minimumColumnWidth ? rawRightWidth : pageWidth - leftWidth;
+
+  if (leftWidth + rightWidth > pageWidth) {
+    const availableRightWidth = pageWidth - leftWidth;
+    if (availableRightWidth >= minimumColumnWidth) {
+      rightWidth = availableRightWidth;
+    } else {
+      leftWidth = fallbackLeftWidth;
+      rightWidth = pageWidth - fallbackLeftWidth;
+    }
+  }
+
+  return {
+    leftWidth: `${Number(leftWidth.toFixed(1))}mm`,
+    rightWidth: `${Number(rightWidth.toFixed(1))}mm`,
+  };
+};
+
 export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const pageSizeStyle = useMemo<CSSProperties>(() => {
@@ -69,14 +100,18 @@ export default function BuildLayout({ sections, settings, distribution, content 
     };
   }, [settings.columns, settings.pageSize, style?.global]);
 
-  const columnStyle = useMemo(() => ({
-    sidebar: { backgroundColor: style?.global?.sidebarBackgroundColor } as CSSProperties,
-    main: { backgroundColor: style?.global?.mainBackgroundColor } as CSSProperties,
-    divider: String(style?.global?.columnBorder ?? ""),
-    leftWidth: String(style?.global?.leftColumnWidth ?? "1fr"),
-    rightWidth: String(style?.global?.rightColumnWidth ?? "2fr"),
-    padding: style?.global?.padding,
-  }), [style?.global]);
+  const columnStyle = useMemo(() => {
+    const { leftWidth, rightWidth } = getColumnWidths(style?.global, settings.pageSize);
+
+    return {
+      sidebar: { backgroundColor: style?.global?.sidebarBackgroundColor } as CSSProperties,
+      main: { backgroundColor: style?.global?.mainBackgroundColor } as CSSProperties,
+      divider: String(style?.global?.columnBorder ?? ""),
+      leftWidth,
+      rightWidth,
+      padding: style?.global?.padding,
+    };
+  }, [settings.pageSize, style?.global]);
 
   const sortedSections = useMemo(() => [...sections]
     .filter((section) => Boolean(distribution[section.id]) && (distribution[section.id]?.visible ?? true))
@@ -125,8 +160,9 @@ export default function BuildLayout({ sections, settings, distribution, content 
   const columnPaddingStyle = columnStyle.padding ? { padding: columnStyle.padding } : {};
   const divider = columnStyle.divider ? <div aria-hidden="true" style={{ alignSelf: "stretch", borderLeft: columnStyle.divider, justifySelf: "center" }} /> : null;
   const dividerColumn = "0";
-  const sidebar = <aside style={{ ...columnStyle.sidebar, ...columnPaddingStyle }}>{left.map(renderSection)}</aside>;
-  const main = <main style={{ ...columnStyle.main, ...columnPaddingStyle }}>{right.map(renderSection)}</main>;
+  const columnBaseStyle: CSSProperties = { boxSizing: "border-box", minWidth: 0, width: "100%" };
+  const sidebar = <aside style={{ ...columnBaseStyle, ...columnStyle.sidebar, ...columnPaddingStyle }}>{left.map(renderSection)}</aside>;
+  const main = <main style={{ ...columnBaseStyle, ...columnStyle.main, ...columnPaddingStyle }}>{right.map(renderSection)}</main>;
   const gridTemplateColumns = sidebarLeft
     ? `${columnStyle.leftWidth} ${dividerColumn} ${columnStyle.rightWidth}`
     : `${columnStyle.rightWidth} ${dividerColumn} ${columnStyle.leftWidth}`;
