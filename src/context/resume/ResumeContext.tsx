@@ -46,6 +46,60 @@ type ProviderProps = { children: ReactNode; };
 
 const defaultSettings: Settings = { fileName: "My_Resume", direction: "LTR", pageSize: "A4", showIcons: true, columns: "TWO", sidebar: { position: "LEFT" } };
 const defaultStyle: ResumeStyle = { global: { fontFamily: "Arial", fontSize: "14px", lineHeight: 1.5, color: "#111827", backgroundColor: "#ffffff", padding: "40px", margin: "0 auto" }, selectors: {}, elements: {}, customCSS: "" };
+const selectorGroupFor = (node?: Pick<Schema, "tag" | "type" | "selectorGroup"> | null) => {
+    const text = `${node?.tag ?? ""} ${node?.type ?? ""} ${node?.selectorGroup ?? ""}`.toLowerCase();
+    if (/img|image|photo|avatar|logo/.test(text)) return "image";
+    if (/icon|svg|\bi\b/.test(text)) return "icon";
+    if (/li|listitem/.test(text)) return "listItem";
+    if (/ul|ol|list/.test(text)) return "list";
+    if (/section/.test(text)) return "section";
+    if (/container|div|wrapper|row|column|article|header|footer/.test(text)) return "container";
+    if (/a|link|url/.test(text)) return "link";
+    if (/span|text/.test(text)) return "text";
+    if (/p|paragraph|summary|description/.test(text)) return "paragraph";
+    return "heading";
+};
+const walkSchema = (node: Schema, items: Schema[] = []) => { items.push(node); node.children?.forEach(child => walkSchema(child, items)); return items; };
+const asStyleRecord = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const mergeStyleObject = (target: Record<string, string | number>, source: unknown) => {
+    Object.entries(asStyleRecord(source)).forEach(([key, value]) => {
+        if ((typeof value === "string" || typeof value === "number") && value !== "") target[key] = value;
+    });
+};
+const normalizeTemplateStyle = (input: unknown, templateSections: Section[]): ResumeStyle => {
+    const raw = asStyleRecord(input);
+    const nodeGroups = new Map(templateSections.flatMap(section => walkSchema(section.schema)).map(node => [node.id, selectorGroupFor(node)]));
+    const selectors: ResumeStyle["selectors"] = { ...(asStyleRecord(raw.selectors) as ResumeStyle["selectors"]) };
+
+    Object.entries(asStyleRecord(raw.elements)).forEach(([nodeId, nodeStyle]) => {
+        const group = nodeGroups.get(nodeId);
+        if (!group) return;
+        selectors[group] = { ...(selectors[group] ?? {}) };
+        mergeStyleObject(selectors[group], nodeStyle);
+    });
+
+    const collectGeneratedStyles = (items: unknown) => {
+        if (!Array.isArray(items)) return;
+        items.forEach((item) => {
+            const styleNode = asStyleRecord(item);
+            const group = typeof styleNode.id === "string" ? nodeGroups.get(styleNode.id) : undefined;
+            if (group) {
+                selectors[group] = { ...(selectors[group] ?? {}) };
+                mergeStyleObject(selectors[group], styleNode.style);
+            }
+            collectGeneratedStyles(styleNode.children);
+        });
+    };
+    collectGeneratedStyles(raw.styles);
+    collectGeneratedStyles(Array.isArray(input) ? input : undefined);
+
+    return {
+        global: { ...defaultStyle.global, ...(asStyleRecord(raw.global) as ResumeStyle["global"]) },
+        selectors,
+        elements: {},
+        customCSS: typeof raw.customCSS === "string" ? raw.customCSS : "",
+    };
+};
 const normalizeDistribution = (distribution: Distribution, settings: Settings) => Object.fromEntries(Object.entries(distribution ?? {}).map(([id, item], index) => [id, { order: item?.order ?? index, position: settings.columns === "TWO" ? item?.position === "right" ? "right" : "left" : "FULL", visible: item?.visible ?? true, showIcon: item?.showIcon ?? true }])) as Distribution;
 const templateSettings = (template: ResumeTemplate) => ({ ...defaultSettings, ...(template.settings as Partial<Settings>), sidebar: { ...defaultSettings.sidebar, ...((template.settings as Partial<Settings>)?.sidebar ?? {}) } }) as Settings;
 const templateDistribution = (template: ResumeTemplate, settings: Settings) => normalizeDistribution(template.distribution as Distribution, settings);
@@ -114,7 +168,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         setSettingsState(nextSettings);
         const nextDistribution = templateDistribution(template, nextSettings);
         setDistributionState(nextDistribution);
-        setStyle((template.style as ResumeStyle) ?? defaultStyle);
+        setStyle(normalizeTemplateStyle(template.style, sections));
         setContent(mergeSectionContent(sections, nextDistribution, templateContent(template)));
         setSelectedNodeId(null);
     }, [sections]);
@@ -134,7 +188,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
                     setSettingsState(nextSettings);
                     const nextDistribution = templateDistribution(first, nextSettings);
                     setDistributionState(nextDistribution);
-                    setStyle((first.style as ResumeStyle) ?? defaultStyle);
+                    setStyle(normalizeTemplateStyle(first.style, loadedSections));
                     setContent(mergeSectionContent(loadedSections, nextDistribution, templateContent(first)));
                 }
             }
