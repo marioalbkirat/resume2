@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { FiAlignCenter, FiAlignJustify, FiAlignLeft, FiAlignRight, FiRefreshCw, FiSquare } from "react-icons/fi";
-import { ColorTarget, VisualGroup, fonts, numberValue, selectorGroups, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
+import { ColorTarget, VisualGroup, fonts, getVisualGroup, numberValue, selectorGroups, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
 import { StyleObject } from "@/types/resume/ResumeStyle";
 
 const cardClass = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -116,13 +116,20 @@ export default function StylesPanel() {
   const controls = useVisualStylesPanel();
   const { style, settings, selectedNode, selectedGroup, updateGlobal, updateSelector, updateElement, resetStyles } = controls;
   const [tab, setTab] = useState<PanelTab>("global");
-  const [selector, setSelector] = useState<VisualGroup>("section");
+  const [selector, setSelector] = useState<string>("section");
+  const selectorOptions = useMemo(() => {
+    const templateSelectors = Object.keys(style.selectors ?? {}).filter(Boolean);
+    return templateSelectors.length > 0 ? templateSelectors : selectorGroups;
+  }, [style.selectors]);
   const selectedPatch = style.elements?.[selectedNode?.id ?? ""] ?? {};
   const pageWidth = pageWidths[settings.pageSize];
   const leftColumnWidth = numberValue(style.global?.leftColumnWidth, settings.pageSize === "A4" ? 70 : 72);
   const rightColumnWidth = Math.max(0, Number((pageWidth - leftColumnWidth).toFixed(1)));
   const updateLeftColumn = (value: number) => updateGlobal({ leftColumnWidth: `${value}mm`, rightColumnWidth: `${Number((pageWidth - value).toFixed(1))}mm` });
   const updateRightColumn = (value: number) => updateGlobal({ leftColumnWidth: `${Number((pageWidth - value).toFixed(1))}mm`, rightColumnWidth: `${value}mm` });
+
+  const activeSelector = selectorOptions.includes(selector) ? selector : selectorOptions[0] ?? "section";
+  const groupForSelector = (value: string): VisualGroup => getVisualGroup({ tag: value, type: value, selectorGroup: value });
 
   const renderSelect = (label: string, value: string | number | undefined, options: { label: string; value: string }[], onChange: (value: string) => void) => <label className="block rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700"><span className="mb-2 block">{label}</span><select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500"><option value="">Default</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 
@@ -144,7 +151,7 @@ export default function StylesPanel() {
 
   return <div className="space-y-4"><div className={cardClass}><h3 className="text-xl font-black text-slate-950">Style Panel</h3><div className="mt-4 grid grid-cols-3 gap-2">{(["global", "elements", "selectors"] as PanelTab[]).map((item) => <MiniButton key={item} active={tab === item} onClick={() => setTab(item)}>{item}</MiniButton>)}</div></div>
     {tab === "global" && <div className={cardClass}><h4 className={titleClass}>Global resume container</h4><div className="space-y-3"><div className="grid grid-cols-2 gap-2">{fonts.map((font) => <MiniButton key={font.id} active={style.global?.fontFamily === font.value} onClick={() => updateGlobal({ fontFamily: font.value })}><span style={{ fontFamily: font.value }}>{font.name}</span></MiniButton>)}</div>{settings.columns === "ONE" && <ColorControl colors={controls} label="Page background" target={{ scope: "global", key: "backgroundColor", label: "Global background" }} />}<Slider label="Page padding" min={0} max={30} value={numberValue(style.global?.padding, 0)} onChange={(value) => updateGlobal({ padding: `${value}mm` })} preview={<span>{numberValue(style.global?.padding, 0)}mm</span>} />{settings.columns === "TWO" && <div className="rounded-xl border border-slate-200 p-3"><p className="mb-1 text-sm font-bold text-slate-700">Two-column layout</p><p className="mb-3 text-xs font-semibold text-slate-500">Columns always add up to {settings.pageSize} width ({pageWidth}mm).</p><Slider label="Left column width" min={40} max={Math.floor(pageWidth - 40)} value={leftColumnWidth} onChange={updateLeftColumn} preview={<span>{leftColumnWidth}mm</span>} /><Slider label="Right column width" min={40} max={Math.floor(pageWidth - 40)} value={rightColumnWidth} onChange={updateRightColumn} preview={<span>{rightColumnWidth}mm</span>} /><div className="mt-3 grid grid-cols-2 gap-3"><ColorControl colors={controls} label="Left color" target={{ scope: "global", key: "sidebarBackgroundColor", label: "Left column color" }} /><ColorControl colors={controls} label="Right color" target={{ scope: "global", key: "mainBackgroundColor", label: "Right column color" }} /></div><div className="mt-3"><BorderControl value={style.global?.columnBorder} onChange={(value) => updateGlobal({ columnBorder: value })} /></div></div>}</div></div>}
-    {tab === "selectors" && <div className={cardClass}><h4 className={titleClass}>Selectors</h4><div className="mb-4 grid grid-cols-2 gap-2">{selectorGroups.map((item) => <MiniButton key={item} active={selector === item} onClick={() => setSelector(item)}>{item}</MiniButton>)}</div>{renderSmartControls("selector", selector, style.selectors?.[selector] ?? {}, (patch) => updateSelector(selector, patch), selector)}</div>}
+    {tab === "selectors" && <div className={cardClass}><h4 className={titleClass}>Selectors</h4><div className="mb-4 grid grid-cols-2 gap-2">{selectorOptions.map((item) => <MiniButton key={item} active={activeSelector === item} onClick={() => setSelector(item)}>{item}</MiniButton>)}</div>{renderSmartControls("selector", activeSelector, style.selectors?.[activeSelector] ?? {}, (patch) => updateSelector(activeSelector, patch), groupForSelector(activeSelector))}</div>}
     {tab === "elements" && <div className={cardClass}><h4 className={titleClass}>Active element</h4><p className="mb-4 text-sm text-slate-500">{selectedNode ? `${selectedNode.name} (${selectedGroup})` : "Click any element in the canvas first."}</p>{selectedNode ? renderSmartControls("element", selectedNode.id, selectedPatch, updateElement, selectedGroup) : <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-400"><FiSquare className="mx-auto mb-2" />No active element</div>}</div>}
     <div className="sticky bottom-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur"><button onClick={resetStyles} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200"><FiRefreshCw />Reset</button></div></div>;
 }
