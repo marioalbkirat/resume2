@@ -10,7 +10,7 @@ export default function Page() {
                 <div className="flex-1 min-w-0">
                     <ResumeWorkSpace />
                 </div>
-                <div className="shrink-0">
+                <div className="flex w-[calc(215.9mm+2rem)] shrink-0 justify-center overflow-auto px-4 pb-4">
                     <Canava />
                 </div>
             </div>
