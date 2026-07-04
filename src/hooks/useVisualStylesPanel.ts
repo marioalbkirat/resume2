@@ -69,7 +69,9 @@ export function useVisualStylesPanel() {
 
   const updateStyle = (recipe: (previous: ResumeStyle) => ResumeStyle) => setStyle((previous) => {
     const next = recipe({ global: cleanGlobal({ ...defaultGlobalStyle, ...(previous.global ?? {}) }), selectors: previous.selectors ?? {}, elements: previous.elements ?? {}, customCSS: previous.customCSS ?? "" });
-    return { ...next, global: cleanGlobal({ ...defaultGlobalStyle, ...(next.global ?? {}) }) };
+    const normalizedStyle = { ...next, global: cleanGlobal({ ...defaultGlobalStyle, ...(next.global ?? {}) }) };
+    console.log("Resume style updated", normalizedStyle);
+    return normalizedStyle;
   });
   const updateGlobal = (patch: StyleObject) => updateStyle((previous) => ({ ...previous, global: cleanGlobal({ ...previous.global, ...patch }) }));
   const updateSelector = (target: string, patch: StyleObject) => updateStyle((previous) => ({ ...previous, selectors: { ...previous.selectors, [target]: clean({ ...(previous.selectors?.[target] ?? {}), ...patch }) } }));
