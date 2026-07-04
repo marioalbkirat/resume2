@@ -79,15 +79,15 @@ export const defaultStyles : Record<string, CSSProperties>= {
         flexShrink: '0',
     },
     ul: {
-        listStyle: 'disc',
-        padding: '0',
+        listStyleType: 'disc',
+        padding: '0 0 0 1.25rem',
         margin: '0 0 1rem 0',
     },
     li: {
         gap:"5px",
         padding: '0.5rem 0',
         borderBottom: '1px solid #f7fafc',
-        display:"flex",
+        display: "list-item",
         flexDirection:"column",
         alignItems:"start"
     },
