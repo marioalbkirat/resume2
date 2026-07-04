@@ -7,6 +7,13 @@ import { StyleObject } from "@/types/resume/ResumeStyle";
 
 const cardClass = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
 const titleClass = "mb-4 flex items-center justify-between text-base font-bold text-slate-900";
+const pageWidths = { A4: 210, LETTER: 215.9 } as const;
+const borderStyles = [
+  { label: "No border", value: "none" },
+  { label: "Solid", value: "solid" },
+  { label: "Soft dashed", value: "dashed" },
+  { label: "Dotted", value: "dotted" },
+] as const;
 type PanelTab = "global" | "elements" | "selectors";
 
 function MiniButton({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick: () => void }) {
@@ -17,14 +24,33 @@ function Slider({ label, value, min, max, onChange, preview }: { label: string; 
   return <label className="block rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700"><span className="flex items-center justify-between"><span>{label}</span>{preview}</span><input type="range" min={min} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} className="mt-3 w-full accent-blue-600" /></label>;
 }
 
-function TextInput({ label, value, onChange, placeholder }: { label: string; value?: string | number; onChange: (value: string) => void; placeholder?: string }) {
-  return <label className="block rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700"><span>{label}</span><input value={String(value ?? "")} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 outline-none focus:border-blue-500" /></label>;
-}
-
 function ColorControl({ label, target, colors }: { label: string; target: ColorTarget; colors: Pick<ReturnType<typeof useVisualStylesPanel>, "setColor" | "valueFor"> }) {
   const current = colors.valueFor(target);
   const pickerValue = /^#[0-9a-fA-F]{6}$/.test(current) ? current : "#000000";
   return <div className="rounded-xl bg-slate-50 p-3"><div className="mb-2 flex items-center justify-between"><span className="text-sm font-semibold text-slate-700">{label}</span><span className="h-7 w-12 rounded-lg border border-slate-200" style={{ backgroundColor: current }} /></div><div className="grid grid-cols-[56px_1fr] gap-2"><input type="color" value={pickerValue} onChange={(event) => colors.setColor(target, event.target.value)} className="h-10 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white" /><input value={current} onChange={(event) => colors.setColor(target, event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 outline-none focus:border-blue-500" /></div></div>;
+}
+
+
+function parseColumnBorder(value?: string | number) {
+  const text = String(value ?? "1px solid #e5e7eb");
+  const width = Number.parseFloat(text) || 1;
+  const style = borderStyles.find((item) => text.includes(item.value))?.value ?? "solid";
+  const color = text.match(/#[0-9a-fA-F]{6}/)?.[0] ?? "#e5e7eb";
+  return { width, style, color };
+}
+
+function columnBorderValue(width: number, style: string, color: string) {
+  return style === "none" || width === 0 ? "" : `${width}px ${style} ${color}`;
+}
+
+function BorderControl({ value, onChange }: { value?: string | number; onChange: (value: string) => void }) {
+  const border = parseColumnBorder(value);
+  const setBorder = (patch: Partial<typeof border>) => {
+    const next = { ...border, ...patch };
+    onChange(columnBorderValue(next.width, next.style, next.color));
+  };
+
+  return <div className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700"><div className="mb-3 flex items-center justify-between"><span>Vertical divider</span><span className="h-8 w-12 rounded-lg bg-white" style={{ borderLeft: columnBorderValue(border.width, border.style, border.color) || "1px solid transparent" }} /></div><div className="grid grid-cols-2 gap-2">{borderStyles.map((item) => <MiniButton key={item.value} active={border.style === item.value || (item.value === "none" && !value)} onClick={() => setBorder({ style: item.value })}>{item.label}</MiniButton>)}</div><Slider label="Divider thickness" min={0} max={8} value={border.width} onChange={(width) => setBorder({ width })} preview={<span>{border.width}px</span>} /><div className="mt-3 grid grid-cols-[56px_1fr] gap-2"><input type="color" value={border.color} onChange={(event) => setBorder({ color: event.target.value })} className="h-10 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white" /><span className="flex items-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-600">Choose divider color</span></div></div>;
 }
 
 function Alignment({ active, onChange }: { active?: string | number; onChange: (patch: StyleObject) => void }) {
@@ -33,10 +59,15 @@ function Alignment({ active, onChange }: { active?: string | number; onChange: (
 
 export default function StylesPanel() {
   const controls = useVisualStylesPanel();
-  const { style, selectedNode, selectedGroup, updateGlobal, updateSelector, updateElement, resetStyles, applyStyles } = controls;
+  const { style, settings, selectedNode, selectedGroup, updateGlobal, updateSelector, updateElement, resetStyles, applyStyles } = controls;
   const [tab, setTab] = useState<PanelTab>("global");
   const [selector, setSelector] = useState<VisualGroup | "section" | "text" | "link" | "listItem">("section");
   const selectedPatch = style.elements?.[selectedNode?.id ?? ""] ?? {};
+  const pageWidth = pageWidths[settings.pageSize];
+  const leftColumnWidth = numberValue(style.global?.leftColumnWidth, settings.pageSize === "A4" ? 70 : 72);
+  const rightColumnWidth = Math.max(0, Number((pageWidth - leftColumnWidth).toFixed(1)));
+  const updateLeftColumn = (value: number) => updateGlobal({ leftColumnWidth: `${value}mm`, rightColumnWidth: `${Number((pageWidth - value).toFixed(1))}mm` });
+  const updateRightColumn = (value: number) => updateGlobal({ leftColumnWidth: `${Number((pageWidth - value).toFixed(1))}mm`, rightColumnWidth: `${value}mm` });
 
   const renderSmartControls = (scope: "selector" | "element", target: string, current: StyleObject, update: (patch: StyleObject) => void, group: string = selectedGroup) => <div className="space-y-3">
     {(group === "heading" || group === "paragraph" || group === "text" || group === "link") && <><ColorControl colors={controls} label="Text color" target={{ scope, target, key: "color", label: "Text color" }} /><div className="grid grid-cols-2 gap-2">{fonts.map((font) => <MiniButton key={font.id} active={current.fontFamily === font.value} onClick={() => update({ fontFamily: font.value })}><span style={{ fontFamily: font.value }}>Aa {font.name}</span></MiniButton>)}</div><Slider label="Size" min={10} max={38} value={numberValue(current.fontSize, group === "heading" ? 22 : 14)} onChange={(value) => update({ fontSize: withPx(value) })} preview={<span style={{ fontSize: numberValue(current.fontSize, 16) }}>Aa</span>} /><div className="grid grid-cols-3 gap-2"><MiniButton active={current.fontWeight === 300} onClick={() => update({ fontWeight: 300 })}>Light</MiniButton><MiniButton active={current.fontWeight === 400} onClick={() => update({ fontWeight: 400 })}>Normal</MiniButton><MiniButton active={current.fontWeight === 700} onClick={() => update({ fontWeight: 700 })}>Bold</MiniButton></div><Alignment active={current.textAlign} onChange={update} /><Slider label="Line spacing" min={10} max={24} value={numberValue(current.lineHeight, 1.5) * 10} onChange={(value) => update({ lineHeight: value / 10 })} /></>}
@@ -47,7 +78,7 @@ export default function StylesPanel() {
   </div>;
 
   return <div className="space-y-4"><div className={cardClass}><h3 className="text-xl font-black text-slate-950">Style Panel</h3><p className="mt-1 text-sm text-slate-500">Choose Global, Selectors, or Elements. Click any item on the canvas to make it active for element-level styling.</p><div className="mt-4 grid grid-cols-3 gap-2">{(["global", "elements", "selectors"] as PanelTab[]).map((item) => <MiniButton key={item} active={tab === item} onClick={() => setTab(item)}>{item}</MiniButton>)}</div></div>
-    {tab === "global" && <div className={cardClass}><h4 className={titleClass}>Global resume container</h4><div className="space-y-3"><div className="grid grid-cols-2 gap-2">{fonts.map((font) => <MiniButton key={font.id} active={style.global?.fontFamily === font.value} onClick={() => updateGlobal({ fontFamily: font.value })}><span style={{ fontFamily: font.value }}>{font.name}</span></MiniButton>)}</div><Slider label="Font size" min={10} max={24} value={numberValue(style.global?.fontSize, 14)} onChange={(value) => updateGlobal({ fontSize: withPx(value) })} /><Slider label="Line height" min={10} max={24} value={numberValue(style.global?.lineHeight, 1.5) * 10} onChange={(value) => updateGlobal({ lineHeight: value / 10 })} /><ColorControl colors={controls} label="Text color" target={{ scope: "global", key: "color", label: "Global text color" }} /><ColorControl colors={controls} label="Background" target={{ scope: "global", key: "backgroundColor", label: "Global background" }} /><TextInput label="Padding" value={style.global?.padding ?? "40px"} onChange={(value) => updateGlobal({ padding: value })} /><TextInput label="Margin" value={style.global?.margin ?? "0 auto"} onChange={(value) => updateGlobal({ margin: value })} /><div className="rounded-xl border border-slate-200 p-3"><p className="mb-3 text-sm font-bold text-slate-700">Two-column layout</p><Slider label="Left column %" min={20} max={80} value={numberValue(style.global?.leftColumnWidth, 34)} onChange={(value) => updateGlobal({ leftColumnWidth: `${value}%` })} /><Slider label="Right column %" min={20} max={80} value={numberValue(style.global?.rightColumnWidth, 66)} onChange={(value) => updateGlobal({ rightColumnWidth: `${value}%` })} /><div className="mt-3 grid grid-cols-2 gap-3"><ColorControl colors={controls} label="Left color" target={{ scope: "global", key: "sidebarBackgroundColor", label: "Left column color" }} /><ColorControl colors={controls} label="Right color" target={{ scope: "global", key: "mainBackgroundColor", label: "Right column color" }} /></div><TextInput label="Vertical border" value={style.global?.columnBorder ?? "1px solid #e5e7eb"} onChange={(value) => updateGlobal({ columnBorder: value })} placeholder="1px solid #e5e7eb" /></div></div></div>}
+    {tab === "global" && <div className={cardClass}><h4 className={titleClass}>Global resume container</h4><div className="space-y-3"><div className="grid grid-cols-2 gap-2">{fonts.map((font) => <MiniButton key={font.id} active={style.global?.fontFamily === font.value} onClick={() => updateGlobal({ fontFamily: font.value })}><span style={{ fontFamily: font.value }}>{font.name}</span></MiniButton>)}</div><ColorControl colors={controls} label="Page background" target={{ scope: "global", key: "backgroundColor", label: "Global background" }} /><p className="rounded-xl bg-blue-50 p-3 text-sm font-semibold text-blue-700">Text color, line height, font size, padding, and margin are configured per selector/element or from Page Size settings instead of Global.</p>{settings.columns === "TWO" && <div className="rounded-xl border border-slate-200 p-3"><p className="mb-1 text-sm font-bold text-slate-700">Two-column layout</p><p className="mb-3 text-xs font-semibold text-slate-500">Columns always add up to {settings.pageSize} width ({pageWidth}mm).</p><Slider label="Left column width" min={40} max={Math.floor(pageWidth - 40)} value={leftColumnWidth} onChange={updateLeftColumn} preview={<span>{leftColumnWidth}mm</span>} /><Slider label="Right column width" min={40} max={Math.floor(pageWidth - 40)} value={rightColumnWidth} onChange={updateRightColumn} preview={<span>{rightColumnWidth}mm</span>} /><div className="mt-3 grid grid-cols-2 gap-3"><ColorControl colors={controls} label="Left color" target={{ scope: "global", key: "sidebarBackgroundColor", label: "Left column color" }} /><ColorControl colors={controls} label="Right color" target={{ scope: "global", key: "mainBackgroundColor", label: "Right column color" }} /></div><div className="mt-3"><BorderControl value={style.global?.columnBorder} onChange={(value) => updateGlobal({ columnBorder: value })} /></div></div>}</div></div>}
     {tab === "selectors" && <div className={cardClass}><h4 className={titleClass}>Selectors</h4><div className="mb-4 grid grid-cols-2 gap-2">{selectorGroups.map((item) => <MiniButton key={item} active={selector === item} onClick={() => setSelector(item)}>{item}</MiniButton>)}</div>{renderSmartControls("selector", selector, style.selectors?.[selector] ?? {}, (patch) => updateSelector(selector, patch), selector)}</div>}
     {tab === "elements" && <div className={cardClass}><h4 className={titleClass}>Active element</h4><p className="mb-4 text-sm text-slate-500">{selectedNode ? `${selectedNode.name} (${selectedGroup})` : "Click any element in the canvas first."}</p>{selectedNode ? renderSmartControls("element", selectedNode.id, selectedPatch, updateElement, selectedGroup) : <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-400"><FiSquare className="mx-auto mb-2" />No active element</div>}</div>}
     <div className="sticky bottom-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur"><div className="flex gap-3"><button onClick={resetStyles} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200"><FiRefreshCw />Reset</button><button onClick={applyStyles} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white hover:bg-blue-700"><FiSave />Apply</button></div></div></div>;
