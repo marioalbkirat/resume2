@@ -21,6 +21,7 @@ interface BuildLayoutProps {
   onListItemAdd?: (sectionId: string, listNodeId: string) => void;
   onListItemDelete?: (sectionId: string, listItemId: string) => void;
   style?: ResumeStyle;
+  pageCount?: number;
 }
 
 const findFirstListId = (section: Section): string | null => {
@@ -80,25 +81,28 @@ const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSiz
   };
 };
 
-export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style }: BuildLayoutProps) {
+export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style, pageCount = 1 }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const pageSizeStyle = useMemo<CSSProperties>(() => {
     const { safeStyle, background, padding } = getPageGlobalStyle(style?.global);
     const fallbackBackgroundColor = background === undefined ? undefined : String(background);
 
+    const singlePageHeight = settings.pageSize === "A4" ? 297 : 279.4;
+    const totalPageHeight = `${singlePageHeight * Math.max(1, pageCount)}mm`;
+
     return {
       ...safeStyle,
       boxSizing: "border-box",
       width: settings.pageSize === "A4" ? "210mm" : "215.9mm",
-      height: settings.pageSize === "A4" ? "297mm" : "279.4mm",
-      minHeight: settings.pageSize === "A4" ? "297mm" : "279.4mm",
+      height: totalPageHeight,
+      minHeight: totalPageHeight,
       padding: settings.columns === "ONE" ? padding : undefined,
       margin: 0,
       boxShadow: "0 0 3px rgba(0,0,0,0.2)",
       backgroundColor: settings.columns === "ONE" ? String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white") : "white",
       overflow: "visible",
     };
-  }, [settings.columns, settings.pageSize, style?.global]);
+  }, [pageCount, settings.columns, settings.pageSize, style?.global]);
 
   const columnStyle = useMemo(() => {
     const { leftWidth, rightWidth } = getColumnWidths(style?.global, settings.pageSize);
@@ -151,15 +155,15 @@ export default function BuildLayout({ sections, settings, distribution, content 
   };
 
   if (settings.columns === "ONE") {
-    return <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>{sortedSections.map(renderSection)}</div>;
+    return <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}><div data-resume-flow="true">{sortedSections.map(renderSection)}</div></div>;
   }
 
   const left = sortedSections.filter((section) => distribution[section.id]?.position !== "right");
   const right = sortedSections.filter((section) => distribution[section.id]?.position === "right");
   const sidebarLeft = settings.sidebar?.position !== "RIGHT";
   const columnPaddingStyle = columnStyle.padding ? { padding: columnStyle.padding } : {};
-  const divider = columnStyle.divider ? <div aria-hidden="true" style={{ alignSelf: "stretch", borderLeft: columnStyle.divider, justifySelf: "center" }} /> : null;
-  const dividerColumn = "0";
+  const divider = <div aria-hidden="true" style={{ alignSelf: "stretch", borderLeft: columnStyle.divider || "0 solid transparent", justifySelf: "center" }} />;
+  const dividerColumn = columnStyle.divider ? "auto" : "0";
   const columnBaseStyle: CSSProperties = { boxSizing: "border-box", minWidth: 0, width: "100%" };
   const sidebar = <aside style={{ ...columnBaseStyle, ...columnStyle.sidebar, ...columnPaddingStyle }}>{left.map(renderSection)}</aside>;
   const main = <main style={{ ...columnBaseStyle, ...columnStyle.main, ...columnPaddingStyle }}>{right.map(renderSection)}</main>;
@@ -169,7 +173,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
 
   return (
     <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>
-      <div style={{ display: "grid", gridTemplateColumns, columnGap: "12px" }}>
+      <div data-resume-flow="true" style={{ display: "grid", gridTemplateColumns, columnGap: "12px" }}>
         {sidebarLeft ? <>{sidebar}{divider}{main}</> : <>{main}{divider}{sidebar}</>}
       </div>
     </div>
