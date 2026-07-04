@@ -34,7 +34,7 @@ export const themes: { id: string; name: string; colors: string[]; patch: Pick<R
 ];
 
 const clean = (value: StyleObject) => Object.fromEntries(Object.entries(value).filter(([, item]) => item !== "" && item !== undefined && item !== null)) as StyleObject;
-const globalOnlyKeys = new Set(["color", "fontSize", "lineHeight", "padding", "margin"]);
+const globalOnlyKeys = new Set(["color", "fontSize", "lineHeight", "margin"]);
 const cleanGlobal = (value: StyleObject) => clean(Object.fromEntries(Object.entries(value).filter(([key]) => !globalOnlyKeys.has(key))) as StyleObject);
 const walk = (node: Schema, items: Schema[] = []) => { items.push(node); node.children?.forEach((child) => walk(child, items)); return items; };
 export const toCss = (style?: StyleObject) => (style ?? {}) as CSSProperties;

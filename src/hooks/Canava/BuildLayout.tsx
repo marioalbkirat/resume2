@@ -37,32 +37,37 @@ const findFirstListId = (section: Section): string | null => {
 const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
   const safeStyle = { ...globalStyle };
   const background = safeStyle.background;
+  const padding = safeStyle.padding;
   delete safeStyle.background;
+  delete safeStyle.padding;
+  delete safeStyle.margin;
   delete safeStyle.sidebarBackgroundColor;
   delete safeStyle.mainBackgroundColor;
   delete safeStyle.columnBorder;
   delete safeStyle.leftColumnWidth;
   delete safeStyle.rightColumnWidth;
-  return { safeStyle, background };
+  return { safeStyle, background, padding };
 };
 
 export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const pageSizeStyle = useMemo<CSSProperties>(() => {
-    const { safeStyle, background } = getPageGlobalStyle(style?.global);
+    const { safeStyle, background, padding } = getPageGlobalStyle(style?.global);
     const fallbackBackgroundColor = background === undefined ? undefined : String(background);
 
     return {
       ...safeStyle,
       boxSizing: "border-box",
       width: settings.pageSize === "A4" ? "210mm" : "215.9mm",
+      height: settings.pageSize === "A4" ? "297mm" : "279.4mm",
       minHeight: settings.pageSize === "A4" ? "297mm" : "279.4mm",
-      padding: safeStyle.padding ?? "10mm",
+      padding: settings.columns === "ONE" ? padding : undefined,
+      margin: 0,
       boxShadow: "0 0 3px rgba(0,0,0,0.2)",
-      backgroundColor: String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white"),
+      backgroundColor: settings.columns === "ONE" ? String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white") : "white",
       overflow: "visible",
     };
-  }, [settings.pageSize, style?.global]);
+  }, [settings.columns, settings.pageSize, style?.global]);
 
   const columnStyle = useMemo(() => ({
     sidebar: { backgroundColor: style?.global?.sidebarBackgroundColor } as CSSProperties,
@@ -70,6 +75,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
     divider: String(style?.global?.columnBorder ?? ""),
     leftWidth: String(style?.global?.leftColumnWidth ?? "1fr"),
     rightWidth: String(style?.global?.rightColumnWidth ?? "2fr"),
+    padding: style?.global?.padding,
   }), [style?.global]);
 
   const sortedSections = useMemo(() => [...sections]
@@ -117,8 +123,9 @@ export default function BuildLayout({ sections, settings, distribution, content 
   const right = sortedSections.filter((section) => distribution[section.id]?.position === "right");
   const sidebarLeft = settings.sidebar?.position !== "RIGHT";
   const borderSide = sidebarLeft ? "borderRight" : "borderLeft";
-  const sidebar = <aside style={{ ...columnStyle.sidebar, ...(columnStyle.divider ? { [borderSide]: columnStyle.divider, paddingInlineEnd: sidebarLeft ? "16px" : undefined, paddingInlineStart: sidebarLeft ? undefined : "16px" } : {}) }}>{left.map(renderSection)}</aside>;
-  const main = <main style={columnStyle.main}>{right.map(renderSection)}</main>;
+  const columnPaddingStyle = columnStyle.padding ? { padding: columnStyle.padding } : {};
+  const sidebar = <aside style={{ ...columnStyle.sidebar, ...columnPaddingStyle, ...(columnStyle.divider ? { [borderSide]: columnStyle.divider } : {}) }}>{left.map(renderSection)}</aside>;
+  const main = <main style={{ ...columnStyle.main, ...columnPaddingStyle }}>{right.map(renderSection)}</main>;
 
   return (
     <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>
