@@ -1,6 +1,12 @@
 import { useResumeBuilder } from "@/context/resume/ResumeContext";
+
+const defaultColumnWidths = {
+    A4: { leftColumnWidth: "70mm", rightColumnWidth: "140mm" },
+    LETTER: { leftColumnWidth: "72mm", rightColumnWidth: "143.9mm" },
+} as const;
+
 export default function SettingsPanel() {
-    const { settings, setSettings } = useResumeBuilder();
+    const { settings, setSettings, setStyle } = useResumeBuilder();
     return (
         <div className="space-y-6">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -85,7 +91,19 @@ export default function SettingsPanel() {
                             <div className="ml-6">
                                 <select
                                     value={settings?.pageSize}
-                                    onChange={(e) => setSettings(prev => ({ ...prev, pageSize: e.target.value as "A4" | "LETTER", }))}
+                                    onChange={(e) => {
+                                        const pageSize = e.target.value as "A4" | "LETTER";
+                                        setSettings(prev => ({ ...prev, pageSize }));
+                                        if (settings?.columns === "TWO") {
+                                            setStyle(prev => ({
+                                                ...prev,
+                                                global: {
+                                                    ...(prev.global ?? {}),
+                                                    ...defaultColumnWidths[pageSize],
+                                                },
+                                            }));
+                                        }
+                                    }}
                                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 >
                                     <option key="A4" value="A4">A4 (210 × 297mm)</option>
