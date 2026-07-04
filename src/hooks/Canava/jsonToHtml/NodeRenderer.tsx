@@ -28,12 +28,15 @@ const contentKeyFor = (node: Schema) => node.id;
 const asCssProperties = (style?: StyleObject) => (style ?? {}) as CSSProperties;
 const selectorKeysFor = (node: Schema) => {
   const keys = [node.tag, node.selectorGroup];
+  if (node.tag === "section") keys.push("section");
   if (node.tag === "i" || node.tag === "svg") keys.push("icon");
   if (node.tag === "img") keys.push("image");
   if (node.tag === "li") keys.push("listItem");
   if (node.tag === "ul" || node.tag === "ol") keys.push("list");
   if (node.tag === "a") keys.push("link");
+  if (node.tag === "p") keys.push("paragraph");
   if (node.tag === "span") keys.push("text");
+  if (/^h[1-6]$/.test(node.tag)) keys.push("heading");
   if (node.tag === "div") keys.push("container");
   return [...new Set(keys.filter(Boolean))];
 };
