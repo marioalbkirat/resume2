@@ -122,15 +122,19 @@ export default function BuildLayout({ sections, settings, distribution, content 
   const left = sortedSections.filter((section) => distribution[section.id]?.position !== "right");
   const right = sortedSections.filter((section) => distribution[section.id]?.position === "right");
   const sidebarLeft = settings.sidebar?.position !== "RIGHT";
-  const borderSide = sidebarLeft ? "borderRight" : "borderLeft";
   const columnPaddingStyle = columnStyle.padding ? { padding: columnStyle.padding } : {};
-  const sidebar = <aside style={{ ...columnStyle.sidebar, ...columnPaddingStyle, ...(columnStyle.divider ? { [borderSide]: columnStyle.divider } : {}) }}>{left.map(renderSection)}</aside>;
+  const divider = columnStyle.divider ? <div aria-hidden="true" style={{ alignSelf: "stretch", borderLeft: columnStyle.divider, justifySelf: "center" }} /> : null;
+  const dividerColumn = "0";
+  const sidebar = <aside style={{ ...columnStyle.sidebar, ...columnPaddingStyle }}>{left.map(renderSection)}</aside>;
   const main = <main style={{ ...columnStyle.main, ...columnPaddingStyle }}>{right.map(renderSection)}</main>;
+  const gridTemplateColumns = sidebarLeft
+    ? `${columnStyle.leftWidth} ${dividerColumn} ${columnStyle.rightWidth}`
+    : `${columnStyle.rightWidth} ${dividerColumn} ${columnStyle.leftWidth}`;
 
   return (
     <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>
-      <div style={{ display: "grid", gridTemplateColumns: sidebarLeft ? `${columnStyle.leftWidth} ${columnStyle.rightWidth}` : `${columnStyle.rightWidth} ${columnStyle.leftWidth}`, gap: "24px" }}>
-        {sidebarLeft ? <>{sidebar}{main}</> : <>{main}{sidebar}</>}
+      <div style={{ display: "grid", gridTemplateColumns, columnGap: "12px" }}>
+        {sidebarLeft ? <>{sidebar}{divider}{main}</> : <>{main}{divider}{sidebar}</>}
       </div>
     </div>
   );
