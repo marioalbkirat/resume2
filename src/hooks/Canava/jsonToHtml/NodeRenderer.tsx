@@ -26,6 +26,19 @@ type NodeRendererProps = {
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
 const contentKeyFor = (node: Schema) => node.id;
 const asCssProperties = (style?: StyleObject) => (style ?? {}) as CSSProperties;
+const borderLonghandPattern = /^border(Top|Right|Bottom|Left)(Width|Style|Color)?$/;
+const borderAxisPattern = /^border(Width|Style|Color)$/;
+const normalizeBorderStyle = (style: CSSProperties) => {
+  const next = { ...style } as CSSProperties & Record<string, unknown>;
+  const hasSideBorder = Object.keys(next).some((key) => borderLonghandPattern.test(key));
+  if (hasSideBorder) {
+    delete next.border;
+    Object.keys(next).forEach((key) => {
+      if (borderAxisPattern.test(key)) delete next[key];
+    });
+  }
+  return next as CSSProperties;
+};
 const selectorKeysFor = (node: Schema) => {
   const keys = [node.tag, node.selectorGroup];
   if (node.tag === "section") keys.push("section");
@@ -40,7 +53,7 @@ const selectorKeysFor = (node: Schema) => {
   if (node.tag === "div") keys.push("container");
   return [...new Set(keys.filter(Boolean))];
 };
-const getNodeStyle = (node: Schema, style?: ResumeStyle) => ({
+const getNodeStyle = (node: Schema, style?: ResumeStyle) => normalizeBorderStyle({
   ...selectorKeysFor(node).reduce((acc, key) => ({ ...acc, ...asCssProperties(style?.selectors?.[key]) }), {} as CSSProperties),
   ...asCssProperties(style?.elements?.[node.id]),
 });

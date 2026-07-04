@@ -57,16 +57,28 @@ function SpacingControl({ label, property, current, update }: { label: string; p
 }
 
 function BoxBorderControl({ current, update }: { current: StyleObject; update: (patch: StyleObject) => void }) {
+  const sideKeys = ["Top", "Right", "Bottom", "Left"] as const;
+  const allPatch = (kind: "Width" | "Style" | "Color", value: string) => ({
+    [`border${kind}`]: "",
+    ...Object.fromEntries(sideKeys.map((side) => [`border${side}${kind}`, value])),
+  });
+  const allValue = (kind: "Width" | "Style" | "Color") => {
+    const values = sideKeys.map((side) => current[`border${side}${kind}`]);
+    const [first] = values;
+    return first && values.every((value) => value === first) ? first : current[`border${kind}`];
+  };
+
   return <div className="space-y-3 rounded-xl bg-slate-50 p-3"><p className="text-sm font-black text-slate-700">Border</p>{borderSides.map((side) => {
     const prefix = side.key ? `border${side.key}` : "border";
     const widthKey = `${prefix}Width`;
     const styleKey = `${prefix}Style`;
     const colorKey = `${prefix}Color`;
-    const width = current[widthKey] ?? (!side.key ? undefined : current.borderWidth);
-    const styleValue = current[styleKey] ?? (!side.key ? undefined : current.borderStyle);
-    const colorValue = String(current[colorKey] ?? (!side.key ? current.borderColor : current.borderColor) ?? "#111827");
+    const width = side.key ? current[widthKey] : allValue("Width");
+    const styleValue = side.key ? current[styleKey] : allValue("Style");
+    const colorValue = String((side.key ? current[colorKey] : allValue("Color")) ?? current.borderColor ?? "#111827");
     const pickerValue = /^#[0-9a-fA-F]{6}$/.test(colorValue) ? colorValue : "#111827";
-    return <div key={side.label} className="rounded-xl border border-slate-200 bg-white p-3"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">{side.label}</p><div className="grid grid-cols-2 gap-2"><SideSlider label="Width" value={width} max={12} onChange={(value) => update({ [widthKey]: withPx(value) })} />{renderBorderStyleSelect(styleValue, (value) => update({ [styleKey]: value }))}</div><div className="mt-2 grid grid-cols-[56px_1fr] gap-2"><input type="color" value={pickerValue} onChange={(event) => update({ [colorKey]: event.target.value })} className="h-10 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white" /><input value={colorValue} onChange={(event) => update({ [colorKey]: event.target.value })} className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 outline-none focus:border-blue-500" /></div></div>;
+    const updateBorder = (kind: "Width" | "Style" | "Color", value: string) => update(side.key ? { [`border${side.key}${kind}`]: value, [`border${kind}`]: "" } : allPatch(kind, value));
+    return <div key={side.label} className="rounded-xl border border-slate-200 bg-white p-3"><p className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-400">{side.label}</p><div className="grid grid-cols-2 gap-2"><SideSlider label="Width" value={width} max={12} onChange={(value) => updateBorder("Width", withPx(value))} />{renderBorderStyleSelect(styleValue, (value) => updateBorder("Style", value))}</div><div className="mt-2 grid grid-cols-[56px_1fr] gap-2"><input type="color" value={pickerValue} onChange={(event) => updateBorder("Color", event.target.value)} className="h-10 w-14 cursor-pointer rounded-lg border border-slate-200 bg-white" /><input value={colorValue} onChange={(event) => updateBorder("Color", event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-sm text-slate-900 outline-none focus:border-blue-500" /></div></div>;
   })}</div>;
 }
 
@@ -125,7 +137,7 @@ export default function StylesPanel() {
     {group === "link" && <div className="space-y-3 rounded-2xl border border-slate-100 p-3"><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Link styles</p><ColorControl colors={controls} label="Hover/accent color" target={{ scope, target, key: "--link-accent-color", label: "Link accent" }} />{renderSelect("Cursor", current.cursor, [{ label: "Pointer", value: "pointer" }, { label: "Default", value: "default" }, { label: "Text", value: "text" }], (value) => update({ cursor: value }))}</div>}
     {group === "image" && <div className="space-y-3 rounded-2xl border border-slate-100 p-3"><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Image</p><div className="grid grid-cols-2 gap-2"><Slider label="Width" min={24} max={360} value={numberValue(current.width, 96)} onChange={(value) => update({ width: withPx(value) })} /><Slider label="Height" min={24} max={360} value={numberValue(current.height, 96)} onChange={(value) => update({ height: withPx(value) })} /></div><Slider label="Image radius" min={0} max={180} value={numberValue(current.borderRadius, 0)} onChange={(value) => update({ borderRadius: withPx(value) })} />{renderSelect("Object fit", current.objectFit, [{ label: "Cover", value: "cover" }, { label: "Contain", value: "contain" }, { label: "Fill", value: "fill" }, { label: "Scale down", value: "scale-down" }, { label: "None", value: "none" }], (value) => update({ objectFit: value }))}</div>}
     {group === "icon" && <>{renderTypographyControls(scope, target, current, update, group)}<div className="space-y-3 rounded-2xl border border-slate-100 p-3"><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Icon</p><Slider label="Icon size" min={8} max={96} value={numberValue(current.fontSize, 20)} onChange={(value) => update({ fontSize: withPx(value) })} /></div></>}
-    {(group === "list" || group === "container" || group === "section") && renderFlexControls(current, update)}
+    {(group === "list" || group === "listItem" || group === "container" || group === "section") && renderFlexControls(current, update)}
     {(group === "list" || group === "listItem") && <div className="space-y-3 rounded-2xl border border-slate-100 p-3"><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">List</p><div className="grid grid-cols-4 gap-2"><MiniButton active={current.listStyleType === "disc"} onClick={() => update({ listStyleType: "disc", display: group === "listItem" ? "list-item" : current.display })}>•</MiniButton><MiniButton active={current.listStyleType === "'✓ '"} onClick={() => update({ listStyleType: "'✓ '", display: group === "listItem" ? "list-item" : current.display })}>✓</MiniButton><MiniButton active={current.listStyleType === "'— '"} onClick={() => update({ listStyleType: "'— '", display: group === "listItem" ? "list-item" : current.display })}>—</MiniButton><MiniButton active={current.listStyleType === "none"} onClick={() => update({ listStyleType: "none" })}>None</MiniButton></div><ColorControl colors={controls} label="Text color" target={{ scope, target, key: "color", label: "Text color" }} /></div>}
     {renderCommonControls(scope, target, current, update)}
   </div>;
