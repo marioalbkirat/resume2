@@ -4,6 +4,9 @@ import { Schema } from '@/types/resume/Section';
 import { FiEdit2 } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { useSectionBuilder } from '../useSectionBuilder';
+import { SectionValidation } from '@/classes/section/SectionValidation';
+
+const validation = new SectionValidation();
 
 export default function UpdateNode({ 
     node, 
@@ -152,8 +155,11 @@ export default function UpdateNode({
                     value = '';
                 }
 
-                if (USER_NAME_TYPES.includes(currentType) && !title) {
-                    Swal.showValidationMessage('⚠️ Name is required!');
+                try {
+                    if (USER_NAME_TYPES.includes(currentType)) validation.validateFieldTitle(title);
+                    if (!tagsWithoutValue.includes(tag) && currentType !== 'image' && currentType !== 'link' && currentType !== 'icon') validation.validateContentValue(tag, value);
+                } catch (error) {
+                    Swal.showValidationMessage(error instanceof Error ? error.message : 'Element validation failed.');
                     return false;
                 }
 
@@ -165,13 +171,12 @@ export default function UpdateNode({
 
         if (result.isConfirmed && result.value) {
             const { title, value, tag, role } = result.value;
-            
-            // تحديث الـ Schema
-            updateNode(node.id, tag, role);
-            
-            // تحديث الـ Content إذا كان هناك قيمة
-            if (value !== undefined) {
-                updateContent(node.id, value, title ? { title } : undefined);
+            try {
+                updateNode(node.id, tag, role);
+                if (value !== undefined) updateContent(node.id, value, title ? { title } : undefined);
+                await Swal.fire({ icon: 'success', title: 'Updated', text: 'Element updated successfully.', timer: 1200, showConfirmButton: false });
+            } catch (error) {
+                await Swal.fire({ icon: 'error', title: 'Update failed', text: error instanceof Error ? error.message : 'Element validation failed.' });
             }
         }
     };

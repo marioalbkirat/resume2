@@ -6,6 +6,9 @@ import { createRoot, Root } from 'react-dom/client';
 import { ComponentType, useRef } from 'react';
 import { IconItem } from '@/hooks/PickIcons/icons';
 import { useSectionBuilder } from '../useSectionBuilder';
+import { SectionValidation } from '@/classes/section/SectionValidation';
+const validation = new SectionValidation();
+
 export default function AddNode({ node, builder }: { node: Schema; builder: ReturnType<typeof useSectionBuilder> }) {
     const { addNode, allowedTagChildren, getAlias, getTagsWithoutValue } = builder;
     const FIXED_NAME_TYPES = ['container', 'list', 'listItem', 'image', 'icon', 'link'];
@@ -262,12 +265,11 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                 if (selectedType === 'heading') tag = tag || 'h2';
                 else tag = typeOptions[selectedType]?.defaultTag || selectedType;
 
-                if (USER_NAME_TYPES.includes(selectedType) && !name) {
-                    Swal.showValidationMessage('⚠️ Name is required!');
-                    return false;
-                }
-                if (selectedType === 'icon' && !selectedIconValueRef.current) {
-                    Swal.showValidationMessage('⚠️ Please select an icon!');
+                try {
+                    if (USER_NAME_TYPES.includes(selectedType)) validation.validateFieldTitle(name);
+                    if (selectedType === 'icon' && !selectedIconValueRef.current) throw new Error('Please select an icon.');
+                } catch (error) {
+                    Swal.showValidationMessage(error instanceof Error ? error.message : 'Element validation failed.');
                     return false;
                 }
 
@@ -278,8 +280,12 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
 
                 let finalName = name;
                 if (FIXED_NAME_TYPES.includes(selectedType)) finalName = selectedType;
-                if (!finalName) {
-                    Swal.showValidationMessage('⚠️ Name is required!');
+                try {
+                    if (!finalName) throw new Error('Name is required.');
+                    if (USER_NAME_TYPES.includes(selectedType)) validation.validateFieldTitle(finalName);
+                    if (!tagsWithoutValue.includes(tag) && selectedType !== 'image' && selectedType !== 'link' && selectedType !== 'icon') validation.validateContentValue(tag, value);
+                } catch (error) {
+                    Swal.showValidationMessage(error instanceof Error ? error.message : 'Element validation failed.');
                     return false;
                 }
 
@@ -295,7 +301,12 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
 
         if (result.isConfirmed && result.value) {
             const { type, name, value, tag, props, role } = result.value;
-            addNode(tag, type, name, node.id, value, props, role);
+            try {
+                addNode(tag, type, name, node.id, value, props, role);
+                await Swal.fire({ icon: 'success', title: 'Added', text: 'Element added successfully.', timer: 1200, showConfirmButton: false });
+            } catch (error) {
+                await Swal.fire({ icon: 'error', title: 'Add failed', text: error instanceof Error ? error.message : 'Element validation failed.' });
+            }
         }
     };
     return (

@@ -5,7 +5,8 @@ import { SectionDB } from "./Section";
 
 export interface UserDB {
     id: string;
-    email: string;
+    email?: string | null;
+    isAdmin: boolean;
     name: string;
     createdAt: Date;
     updatedAt: Date;
