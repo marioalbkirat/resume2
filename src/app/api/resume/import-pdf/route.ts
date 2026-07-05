@@ -31,30 +31,116 @@ const decodePdfHex = (value: string) => {
     return bytes.toString("latin1");
 };
 
-const extractPdfStrings = (input: string) => {
-    const values: string[] = [];
-    const tokens = /\((?:\\.|[^\\()])*\)|<([0-9a-fA-F\s]+)>/g;
-    for (const match of input.matchAll(tokens)) {
-        if (match[0].startsWith("(")) values.push(decodePdfLiteral(match[0].slice(1, -1)));
-        else if (match[1]) values.push(decodePdfHex(match[1]));
+const decodePdfStringBytes = (value: string) => Buffer.from(value, "latin1");
+
+const codePointToString = (hex: string) => {
+    const bytes = Buffer.from(hex.length % 2 === 0 ? hex : `${hex}0`, "hex");
+    if (bytes.length === 1) return String.fromCharCode(bytes[0]);
+    if (bytes.length >= 2 && bytes.length % 2 === 0) {
+        const utf16le = Buffer.from(bytes);
+        for (let index = 0; index + 1 < utf16le.length; index += 2) [utf16le[index], utf16le[index + 1]] = [utf16le[index + 1], utf16le[index]];
+        return utf16le.toString("utf16le");
     }
-    return values;
+    return bytes.toString("utf8");
 };
 
-const extractTextOperators = (stream: string) => {
+const parseCMap = (cmap: string) => {
+    const map = new Map<string, string>();
+    const sections = cmap.matchAll(/beginbfchar([\s\S]*?)endbfchar|beginbfrange([\s\S]*?)endbfrange/g);
+    for (const section of sections) {
+        const bfchar = section[1];
+        const bfrange = section[2];
+        if (bfchar) {
+            for (const line of bfchar.matchAll(/<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/g)) map.set(line[1].toUpperCase(), codePointToString(line[2]));
+        }
+        if (bfrange) {
+            for (const line of bfrange.matchAll(/<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>\s+(?:<([0-9a-fA-F]+)>|\[((?:\s*<[0-9a-fA-F]+>\s*)+)\])/g)) {
+                const start = Number.parseInt(line[1], 16);
+                const end = Number.parseInt(line[2], 16);
+                const width = line[1].length;
+                if (line[3]) {
+                    const destination = Number.parseInt(line[3], 16);
+                    for (let code = start; code <= end; code++) map.set(code.toString(16).toUpperCase().padStart(width, "0"), codePointToString((destination + code - start).toString(16)));
+                } else if (line[4]) {
+                    const destinations = [...line[4].matchAll(/<([0-9a-fA-F]+)>/g)].map(match => match[1]);
+                    destinations.forEach((destination, index) => map.set((start + index).toString(16).toUpperCase().padStart(width, "0"), codePointToString(destination)));
+                }
+            }
+        }
+    }
+    return map;
+};
+
+const decodeWithCMap = (raw: string, cmap?: Map<string, string>) => {
+    if (!cmap?.size) return raw;
+    const bytes = decodePdfStringBytes(raw);
+    const keys = [...cmap.keys()];
+    const codeByteLengths = [...new Set(keys.map(key => key.length / 2))].sort((a, b) => b - a);
+    let decoded = "";
+    for (let index = 0; index < bytes.length;) {
+        const length = codeByteLengths.find(size => index + size <= bytes.length && cmap.has(bytes.subarray(index, index + size).toString("hex").toUpperCase()));
+        if (length) {
+            decoded += cmap.get(bytes.subarray(index, index + length).toString("hex").toUpperCase()) ?? "";
+            index += length;
+        } else {
+            decoded += String.fromCharCode(bytes[index]);
+            index += 1;
+        }
+    }
+    return decoded;
+};
+
+const extractPdfStringToken = (token: string, cmap?: Map<string, string>) => {
+    const raw = token.startsWith("(") ? decodePdfLiteral(token.slice(1, -1)) : decodePdfHex(token.slice(1, -1));
+    return decodeWithCMap(raw, cmap);
+};
+
+const extractTextOperators = (stream: string, fontMaps: Map<string, Map<string, string>> = new Map()) => {
     const values: string[] = [];
-    const singleText = /(\((?:\\.|[^\\()])*\)|<[0-9a-fA-F\s]+>)\s*(?:Tj|'|")/g;
-    for (const match of stream.matchAll(singleText)) values.push(...extractPdfStrings(match[1]));
-    const arrays = /\[((?:.|\n)*?)\]\s*TJ/g;
-    for (const match of stream.matchAll(arrays)) {
-        const parts = extractPdfStrings(match[1]);
-        if (parts.length) values.push(parts.join(""));
+    let currentFont: string | undefined;
+    const operators = /\/([A-Za-z0-9_.-]+)\s+[\d.]+\s+Tf|(\((?:\\.|[^\\()])*\)|<[0-9a-fA-F\s]+>)\s*(?:Tj|'|")|\[((?:.|\n)*?)\]\s*TJ/g;
+    for (const match of stream.matchAll(operators)) {
+        if (match[1]) currentFont = match[1];
+        else if (match[2]) values.push(extractPdfStringToken(match[2], currentFont ? fontMaps.get(currentFont) : undefined));
+        else if (match[3]) {
+            const parts = [...match[3].matchAll(/\((?:\\.|[^\\()])*\)|<[0-9a-fA-F\s]+>/g)].map(part => extractPdfStringToken(part[0], currentFont ? fontMaps.get(currentFont) : undefined));
+            if (parts.length) values.push(parts.join(""));
+        }
     }
     return values;
 };
 
 const extractPdfText = (buffer: Buffer) => {
     const source = buffer.toString("latin1");
+    const objects = new Map<string, string>();
+    for (const object of source.matchAll(/(\d+)\s+\d+\s+obj([\s\S]*?)endobj/g)) objects.set(object[1], object[2]);
+    const unicodeMaps = new Map<string, Map<string, string>>();
+    for (const [id, object] of objects) {
+        const streamMatch = object.match(/stream\r?\n([\s\S]*?)\r?\nendstream/);
+        if (!streamMatch) continue;
+        const streamBuffer = Buffer.from(streamMatch[1], "latin1");
+        const candidates = object.includes("/FlateDecode") ? [() => inflateSync(streamBuffer).toString("latin1"), () => streamMatch[1]] : [() => streamMatch[1]];
+        for (const read of candidates) {
+            try {
+                const cmap = parseCMap(read());
+                if (cmap.size) unicodeMaps.set(id, cmap);
+                break;
+            } catch {
+                continue;
+            }
+        }
+    }
+    const fontMaps = new Map<string, Map<string, string>>();
+    for (const object of objects.values()) {
+        const resources = object.match(/\/Font\s*<<([\s\S]*?)>>/);
+        if (!resources) continue;
+        for (const font of resources[1].matchAll(/\/([A-Za-z0-9_.-]+)\s+(\d+)\s+\d+\s+R/g)) {
+            const fontObject = objects.get(font[2]);
+            const toUnicode = fontObject?.match(/\/ToUnicode\s+(\d+)\s+\d+\s+R/);
+            const cmap = toUnicode ? unicodeMaps.get(toUnicode[1]) : undefined;
+            if (cmap) fontMaps.set(font[1], cmap);
+        }
+    }
     const streams = [...source.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
     const chunks: string[] = [];
     for (const match of streams) {
@@ -64,7 +150,7 @@ const extractPdfText = (buffer: Buffer) => {
         const candidates = objectPrefix.includes("/FlateDecode") ? [() => inflateSync(streamBuffer).toString("latin1"), () => match[1]] : [() => match[1]];
         for (const read of candidates) {
             try {
-                const text = extractTextOperators(read()).join(" ");
+                const text = extractTextOperators(read(), fontMaps).join(" ");
                 if (text.trim()) chunks.push(text);
                 break;
             } catch {
