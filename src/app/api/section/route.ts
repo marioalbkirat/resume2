@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/db";
-import { validateSectionForm } from "@/lib/section/validation";
+import { SectionValidation } from "@/classes/section/SectionValidation";
 import { NextRequest, NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 
 const CURRENT_USER_ID = "cmqzvfuwr0001t9x8hf4jp9n6";
+const ADMIN_USER_ID = "cmqzvcgn80000t9x89yni4fg9";
+const validation = new SectionValidation();
+
+function message(error: unknown) { return error instanceof Error ? error.message : "Section request failed."; }
 
 export async function GET() {
     try {
@@ -13,17 +16,20 @@ export async function GET() {
         });
         return NextResponse.json(sections);
     } catch (error) {
-        return NextResponse.json(error, { status: 400 });
+        return NextResponse.json({ error: message(error) }, { status: 400 });
     }
 }
+
 export async function POST(request: NextRequest) {
     try {
-        const validated = validateSectionForm(await request.json());
-        if (validated.error) return NextResponse.json({ error: validated.error }, { status: 400 });
-        const result = await prisma.section.create({ data: { ...validated.data!, visibility: validated.data!.visibility === "OFFICIAL" ? "PRIVATE" : validated.data!.visibility, schema: validated.data!.schema as unknown as Prisma.InputJsonValue, content: validated.data!.content as unknown as Prisma.InputJsonValue, authorId: CURRENT_USER_ID } });
+        const raw = await request.json();
+        const validated = validation.validateSectionForm(raw, { admin: raw?.visibility === "OFFICIAL" });
+        const authorId = validated.visibility === "OFFICIAL" ? ADMIN_USER_ID : CURRENT_USER_ID;
+        const duplicate = await prisma.section.findFirst({ where: { authorId, name: validated.name }, select: { id: true } });
+        if (duplicate) return NextResponse.json({ error: "You already have a section with this name." }, { status: 409 });
+        const result = await prisma.section.create({ data: { ...validated, schema: validated.schema as never, content: validated.content as never, authorId } });
         return NextResponse.json(result);
     } catch (error) {
-        console.log(error);
-        return NextResponse.json(error, { status: 400 });
+        return NextResponse.json({ error: message(error) }, { status: 400 });
     }
 }

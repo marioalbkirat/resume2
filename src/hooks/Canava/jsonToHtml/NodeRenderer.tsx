@@ -67,7 +67,7 @@ const normalizeHref = (href: string) => {
 
 export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode, style }: NodeRendererProps) {
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
-  if ((node.tag === "i" || node.tag === "svg") && node.role === "sectionIcon" && !showSectionIcons) return null;
+  if ((node.tag === "i" || node.tag === "svg") && (node.role === "sectionIcon" || node.role === "sectionTitleIcon") && !showSectionIcons) return null;
 
   const key = contentKeyFor(node);
   const nodeContent = content[key];
@@ -96,7 +96,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   }
 
   if (node.tag === "img") {
-    return <span {...common} className={`inline-block ${common.className}`}><Image src={nodeContent?.value || "/placeholder.png"} alt={node.name} width={100} height={100} /></span>;
+    return <span {...common} className={`inline-block ${common.className}`}><Image src={nodeContent?.value || "/placeholder.png"} alt={nodeContent?.prop?.alt || "Image"} width={100} height={100} /></span>;
   }
 
   if (node.tag === "a") {

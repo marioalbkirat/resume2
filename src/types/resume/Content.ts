@@ -1,5 +1,4 @@
-import { Prisma } from "@prisma/client";
-export interface Content extends Prisma.JsonObject {
+export interface Content extends Record<string, unknown> {
     id: string;
     type: string;
     prop?: Record<string, string>;

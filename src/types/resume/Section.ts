@@ -1,12 +1,15 @@
 import { UserDB } from "./User";
 import { Content } from "./Content";
 
+export type SectionRole = "regularIcon" | "sectionTitleIcon" | "default" | "sectionIcon";
+
 export interface Schema {
     id: string;
-    name: string;
     type: string;
     tag: string;
-    role?: "default" | "sectionIcon";
+    /** @deprecated Field labels live in Content.prop.title. */
+    name?: string;
+    role?: SectionRole;
     children: Schema[];
     parentId?: string;
 }

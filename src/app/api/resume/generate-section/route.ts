@@ -173,7 +173,8 @@ function extractJson(text: string): GeneratedPayload {
     }
 }
 
-function normalizeSchema(node: Partial<Schema> | undefined, parentId?: string, fallbackName = "Generated Section"): Schema {
+function normalizeSchema(node: Partial<Schema> | undefined, parentId?: string, _fallbackName?: string): Schema {
+    void _fallbackName;
     const requestedTag = typeof node?.tag === "string" ? node.tag : "div";
     const tag = ALLOWED_TAGS.includes(requestedTag as (typeof ALLOWED_TAGS)[number]) ? requestedTag : "div";
     const id = typeof node?.id === "string" && node.id.trim() ? node.id.trim() : crypto.randomUUID();
@@ -181,15 +182,14 @@ function normalizeSchema(node: Partial<Schema> | undefined, parentId?: string, f
 
     return {
         id,
-        name: typeof node?.name === "string" && node.name.trim() ? node.name.trim() : fallbackName,
         tag,
         type: TAG_TYPES[tag] || tag,
-        role: tag === "i" && node?.role === "sectionIcon" ? "sectionIcon" : tag === "i" ? "default" : undefined,
+        role: tag === "i" && (node?.role === "sectionIcon" || node?.role === "sectionTitleIcon") ? "sectionTitleIcon" : tag === "i" ? "regularIcon" : undefined,
         parentId,
         children: Array.isArray(node?.children)
             ? node.children
                 .filter((child) => allowedChildren.includes(typeof child?.tag === "string" ? child.tag : ""))
-                .map((child) => normalizeSchema(child, id, "Generated Field"))
+                .map((child) => normalizeSchema(child, id))
             : [],
     };
 }
@@ -269,14 +269,14 @@ function normalizeContent(schema: Schema, generatedContent: GeneratedPayload["co
         flattenSchema(schema)
             .filter((node) => !TAGS_WITHOUT_VALUE.has(node.tag))
             .map((node) => {
-                const nodeKeys = [node.id, node.name, node.tag, node.type].filter(Boolean).map(normalizeKey);
+                const nodeKeys = [node.id, node.tag, node.type].filter(Boolean).map(normalizeKey);
                 const original = normalizedInput.find((entry) =>
                     nodeKeys.includes(entry.key) || nodeKeys.includes(entry.id) || nodeKeys.includes(entry.propName)
                 )?.item;
                 const content: Content = {
                     id: node.id,
                     type: node.type,
-                    prop: original?.prop ?? (node.tag === "a" ? { href: "#" } : node.tag === "img" ? { src: "", alt: node.name } : undefined),
+                    prop: original?.prop ?? (node.tag === "a" ? { href: "#" } : node.tag === "img" ? { src: "", alt: "Image" } : undefined),
                     value: typeof original?.value === "string" ? original.value : "",
                 };
                 return [node.id, content];

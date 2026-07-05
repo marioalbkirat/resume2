@@ -12,7 +12,7 @@ export default function SectionsPage() {
             setSections(data);
         };
         loadSections();
-    }, []);
+    }, [getSections]);
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this section?')) return;
         await deleteSection(id);

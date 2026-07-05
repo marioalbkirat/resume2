@@ -25,7 +25,7 @@ interface NodeRendererProps {
 
 const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     if (!node) return null;
-    const { tag, children, name, id } = node;
+    const { tag, children, id } = node;
     const content = getContent(id);
     const value = content?.value || '';
     const props = content?.prop || {};
@@ -38,23 +38,23 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
                 <IconComponent
                     style={style}
                     data-id={id}
-                    data-name={name}
+                    title={props.title}
                     data-icon={value}
                 />
             );
         }
-        return <span style={style} data-id={id} data-name={name}>🔹</span>;
+        return <span style={style} data-id={id} title={props.title}>🔹</span>;
     }
 
     if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
         const Tag = tag as keyof JSX.IntrinsicElements;
-        return <Tag style={style} data-id={id} data-name={name} className={tag}>{value}</Tag>;
+        return <Tag style={style} data-id={id} title={props.title} className={tag}>{value}</Tag>;
     }
 
     if (tag === 'li') {
         const Tag = tag as keyof JSX.IntrinsicElements;
         return (
-            <Tag style={style} data-id={id} data-name={name} className={tag}>
+            <Tag style={style} data-id={id} title={props.title} className={tag}>
                 {children?.map((child: Schema) => (
                     <NodeRenderer key={child.id} node={child} getContent={getContent} />
                 ))}
@@ -65,7 +65,7 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     if (tag === 'ul') {
         const Tag = tag as keyof JSX.IntrinsicElements;
         return (
-            <Tag style={style} data-id={id} data-name={name} className={tag}>
+            <Tag style={style} data-id={id} title={props.title} className={tag}>
                 {children?.map((child: Schema) => (
                     <NodeRenderer key={child.id} node={child} getContent={getContent} />
                 ))}
@@ -81,7 +81,7 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
                 src={props.src as string || ""}
                 style={style}
                 data-id={id}
-                data-name={name}
+                title={props.title}
                 className={tag}
             />
         );
@@ -90,7 +90,7 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     if (tag === "a") {
         const Tag = tag as keyof JSX.IntrinsicElements;
         return (
-            <Tag href={props.href as string || "#"} style={style} data-id={id} data-name={name} className={tag}>
+            <Tag href={props.href as string || "#"} style={style} data-id={id} title={props.title} className={tag}>
                 {value}
             </Tag>
         );
@@ -98,7 +98,7 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
 
     const Tag = tag as keyof JSX.IntrinsicElements;
     return (
-        <Tag style={style} data-id={id} data-name={name} className={tag}>
+        <Tag style={style} data-id={id} title={props.title} className={tag}>
             {value}
             {children?.map((child: Schema) => (
                 <NodeRenderer key={child.id} node={child} getContent={getContent} />
@@ -121,7 +121,6 @@ export default function SectionPreview({ builder }: SectionPreviewProps) {
         <div className="section-preview">
             <section
                 style={sectionStyle}
-                data-name={schema.name || 'Untitled'}
                 className="section"
             >
                 {schema.children?.map((child: Schema) => (

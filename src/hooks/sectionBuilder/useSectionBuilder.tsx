@@ -8,15 +8,15 @@ import { useMemo, useState, useCallback } from "react";
 interface UseSectionBuilderProps { 
     initialSchema?: Schema; 
     initialContent?: Record<string, Content>; 
-    sectionName?: string;
+    sectionName: string;
 }
 
 interface UseSectionBuilderReturn {
     schema: Schema;
     content: Record<string, Content>;
-    addNode: (tag: string, type: string, name: string, parentId: string, value?: string, props?: Record<string, string>, role?: "default" | "sectionIcon") => void;
+    addNode: (tag: string, type: string, title: string | undefined, parentId: string, value?: string, props?: Record<string, string>, role?: "regularIcon" | "sectionTitleIcon" | "default" | "sectionIcon") => void;
     deleteNode: (id: string) => void;
-    updateNode: (id: string, tag?: string, name?: string, role?: "default" | "sectionIcon") => void;
+    updateNode: (id: string, tag?: string, role?: "regularIcon" | "sectionTitleIcon" | "default" | "sectionIcon") => void;
     updateContent: (nodeId: string, value: string, props?: Record<string, string>) => void;
     getNode: (id: string) => Schema | null;
     getContent: (nodeId: string) => Content | null;
@@ -31,12 +31,11 @@ interface UseSectionBuilderReturn {
     resetBuilder: (newSchema?: Schema, newContent?: Record<string, Content>) => void;
 }
 
-export function useSectionBuilder({ initialSchema, initialContent = {}, sectionName = "Untitled" }: UseSectionBuilderProps = {}): UseSectionBuilderReturn {
+export function useSectionBuilder({ initialSchema, initialContent = {} }: UseSectionBuilderProps): UseSectionBuilderReturn {
     const [schema, setSchema] = useState<Schema>(() => initialSchema ?? { 
         id: crypto.randomUUID(), 
         tag: "section", 
         type: "section", 
-        name: sectionName,
         children: []
     });
     const [content, setContent] = useState<Record<string, Content>>(initialContent);
@@ -44,9 +43,9 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
     const schemaControl = useMemo(() => new SectionSchema(), []);
     const contentControl = useMemo(() => new SectionContent(), []);
 
-    const addNode = useCallback((tag: string, type: string, name: string, parentId: string, value?: string, props?: Record<string, string>, role: "default" | "sectionIcon" = "default") => {
+    const addNode = useCallback((tag: string, type: string, title: string | undefined, parentId: string, value?: string, props?: Record<string, string>, role: "regularIcon" | "sectionTitleIcon" | "default" | "sectionIcon" = "regularIcon") => {
         const schemaCopy = JSON.parse(JSON.stringify(schema));
-        const result = schemaControl.addNode(schemaCopy, tag, name, parentId, role);
+        const result = schemaControl.addNode(schemaCopy, tag, parentId, role);
         if (!result) return;
         
         const { section, child } = result;
@@ -57,17 +56,18 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
             if (!existingContent) {
                 const defaultContent = contentControl.getDefaultContent(type);
                 return contentControl.createContent(
-                    prevContent, 
-                    child.id, 
-                    type, 
-                    value || defaultContent.value, 
-                    props || defaultContent.props
+                    prevContent,
+                    child.id,
+                    tag,
+                    type,
+                    value || defaultContent.value,
+                    { ...(props || defaultContent.props), ...(title ? { title } : {}) }
                 );
             } else {
                 let updatedContent = prevContent;
                 let needsUpdate = false;
                 if (value && existingContent.value !== value) {
-                    updatedContent = contentControl.updateContentValue(updatedContent, child.id, value);
+                    updatedContent = contentControl.updateContentValue(updatedContent, child.id, tag, value);
                     needsUpdate = true;
                 }
                 if (props && Object.keys(props).length > 0) {
@@ -89,10 +89,10 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
         }
     }, [schema, schemaControl, contentControl]);
 
-    const updateNode = useCallback((id: string, tag?: string, name?: string, role?: "default" | "sectionIcon") => {
+    const updateNode = useCallback((id: string, tag?: string, role?: "regularIcon" | "sectionTitleIcon" | "default" | "sectionIcon") => {
         setSchema(prevSchema => {
             const schemaCopy = JSON.parse(JSON.stringify(prevSchema));
-            const result = schemaControl.updateNode(schemaCopy, id, tag, name, role);
+            const result = schemaControl.updateNode(schemaCopy, id, tag, role);
             return result ?? prevSchema;
         });
     }, [schemaControl]);
@@ -103,7 +103,8 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
             if (existingContent) {
                 let updatedContent = prevContent;
                 if (value !== undefined) {
-                    updatedContent = contentControl.updateContentValue(updatedContent, nodeId, value);
+                    const node = schemaControl.getNode(schema, nodeId);
+                    updatedContent = contentControl.updateContentValue(updatedContent, nodeId, node?.tag || "span", value);
                 }
                 if (props) {
                     updatedContent = contentControl.updateContentProps(updatedContent, nodeId, props);
@@ -114,10 +115,11 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
                 if (node) {
                     const defaultContent = contentControl.getDefaultContent(node.type);
                     return contentControl.createContent(
-                        prevContent, 
-                        nodeId, 
-                        node.type, 
-                        value || defaultContent.value, 
+                        prevContent,
+                        nodeId,
+                        node.tag,
+                        node.type,
+                        value || defaultContent.value,
                         props || defaultContent.props
                     );
                 }
@@ -179,12 +181,11 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
                 id: crypto.randomUUID(),
                 tag: "section",
                 type: "section",
-                name: sectionName,
                 children: []
             });
         }
         setContent(newContent ?? {});
-    }, [sectionName]);
+    }, []);
 
     return {
         schema,

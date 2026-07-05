@@ -37,7 +37,7 @@ export default function UpdateNode({
         const htmlContent = `
             <div style="text-align: left; direction: ltr;">
                 <div style="margin-bottom: 16px; padding: 10px; background: #eff6ff; border-radius: 8px; font-size: 14px; color: #1e40af;">
-                    ✏️ Updating: <strong>${node.name}</strong> (${node.tag})
+                    ✏️ Updating: <strong>${content?.prop?.title || node.type}</strong> (${node.tag})
                 </div>
 
                 <div id="name-container" style="margin-bottom: 16px;">
@@ -46,7 +46,7 @@ export default function UpdateNode({
                     </label>
                     <input type="text" id="swal-name" 
                         style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box; font-size: 14px; ${FIXED_NAME_TYPES.includes(currentType) ? 'background-color: #f3f4f6; color: #6b7280;' : ''}"
-                        value="${node.name}"
+                        value="${content?.prop?.title || node.type}"
                         ${FIXED_NAME_TYPES.includes(currentType) ? 'disabled' : ''}
                     />
                     <div id="name-error" style="font-size: 12px; color: #ef4444; margin-top: 4px;"></div>
@@ -70,8 +70,8 @@ export default function UpdateNode({
                     <div style="margin-bottom: 16px;">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Icon Role</label>
                         <select id="swal-icon-role" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-sizing: border-box; font-size: 14px;">
-                            <option value="default" ${node.role !== 'sectionIcon' ? 'selected' : ''}>Default icon</option>
-                            <option value="sectionIcon" ${node.role === 'sectionIcon' ? 'selected' : ''}>Section title icon</option>
+                            <option value="regularIcon" ${node.role !== 'sectionTitleIcon' ? 'selected' : ''}>Regular content icon</option>
+                            <option value="sectionTitleIcon" ${node.role === 'sectionTitleIcon' ? 'selected' : ''}>Section title icon</option>
                         </select>
                     </div>
                 ` : ''}
@@ -104,9 +104,9 @@ export default function UpdateNode({
             didOpen: () => {
                 const nameInput = document.getElementById('swal-name') as HTMLInputElement;
                 const validateName = () => {
-                    const name = nameInput?.value.trim();
+                    const title = nameInput?.value.trim();
                     const errorDiv = document.getElementById('name-error');
-                    if (USER_NAME_TYPES.includes(currentType) && !name) {
+                    if (USER_NAME_TYPES.includes(currentType) && !title) {
                         errorDiv!.textContent = '⚠️ Name is required';
                         nameInput!.style.borderColor = '#ef4444';
                         nameInput!.style.backgroundColor = '#fef2f2';
@@ -132,12 +132,12 @@ export default function UpdateNode({
                 });
             },
             preConfirm: () => {
-                let name = (document.getElementById('swal-name') as HTMLInputElement)?.value.trim();
+                let title = (document.getElementById('swal-name') as HTMLInputElement)?.value.trim();
                 let value = (document.getElementById('swal-value') as HTMLInputElement)?.value || '';
                 const tag = (document.getElementById('swal-tag') as HTMLSelectElement)?.value || node.tag;
 
                 if (FIXED_NAME_TYPES.includes(currentType)) {
-                    name = currentType;
+                    title = currentType;
                 }
 
                 if (currentType === 'image') {
@@ -152,26 +152,26 @@ export default function UpdateNode({
                     value = '';
                 }
 
-                if (USER_NAME_TYPES.includes(currentType) && !name) {
+                if (USER_NAME_TYPES.includes(currentType) && !title) {
                     Swal.showValidationMessage('⚠️ Name is required!');
                     return false;
                 }
 
-                const role = currentType === 'icon' ? ((document.getElementById('swal-icon-role') as HTMLSelectElement)?.value as 'default' | 'sectionIcon') || 'default' : undefined;
+                const role = currentType === 'icon' ? ((document.getElementById('swal-icon-role') as HTMLSelectElement)?.value as 'regularIcon' | 'sectionTitleIcon') || 'regularIcon' : undefined;
 
-                return { name, value, tag, role };
+                return { title, value, tag, role };
             }
         });
 
         if (result.isConfirmed && result.value) {
-            const { name, value, tag, role } = result.value;
+            const { title, value, tag, role } = result.value;
             
             // تحديث الـ Schema
-            updateNode(node.id, tag, name, role);
+            updateNode(node.id, tag, role);
             
             // تحديث الـ Content إذا كان هناك قيمة
             if (value !== undefined) {
-                updateContent(node.id, value);
+                updateContent(node.id, value, title ? { title } : undefined);
             }
         }
     };
