@@ -142,10 +142,13 @@ export class SectionSchema {
     }
 
     allowedTagChildren(tag: string): string[] {
-        if (["img", "i", "span", "text", "a", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return [];
+        if (["img", "i", "text"].includes(tag)) return [];
         if (tag === "ul") return ["li"];
         if (tag === "li") return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
         if (tag === "p") return ["span", "img", "i", "a"];
+        if (tag === "span") return ["span", "img", "i", "a"];
+        if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return ["span", "img", "i", "a"];
+        if (tag === "a") return ["span", "img", "i"];
         return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
     }
 

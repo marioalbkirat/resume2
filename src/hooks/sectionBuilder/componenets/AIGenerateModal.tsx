@@ -2,13 +2,15 @@
 import { useState } from 'react';
 import Swal from 'sweetalert2';
 import { AISectionGenerator } from '@/classes/section/AISectionGenerator';
+import { Content } from '@/types/resume/Content';
+import { Schema } from '@/types/resume/Section';
 import { useSectionBuilder } from '../useSectionBuilder';
 
 interface AIGenerateModalProps { 
     builder: ReturnType<typeof useSectionBuilder>; 
     onClose?: () => void; 
     sectionName: string;
-    onGenerated?: () => void;
+    onGenerated?: (data: { schema: Schema; content: Record<string, Content> }) => void;
 }
 
 export default function AIGenerateModal({ builder, onClose, sectionName, onGenerated }: AIGenerateModalProps) {
@@ -40,8 +42,9 @@ export default function AIGenerateModal({ builder, onClose, sectionName, onGener
                 ? Object.fromEntries(result.content.map(item => [item.id, item]))
                 : result.content;
 
-            builder.resetBuilder({ ...result.schema, name: sectionName }, contentRecord);
-            onGenerated?.();
+            const generatedData = { schema: { ...result.schema, name: sectionName }, content: contentRecord };
+            builder.resetBuilder(generatedData.schema, generatedData.content);
+            onGenerated?.(generatedData);
             
             Swal.fire({
                 icon: 'success',
