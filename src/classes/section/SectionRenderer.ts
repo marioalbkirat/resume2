@@ -1,10 +1,12 @@
-import { SchemaNode } from "@/types/resume/schemaSection";
+import { Schema } from "@/types/resume/Section";
+
+type RenderableSchema = Schema & { value?: string };
 export class SectionRenderer {
-    private section: SchemaNode;
-    constructor(section: SchemaNode) {
+    private section: RenderableSchema;
+    constructor(section: RenderableSchema) {
         this.section = section;
     }
-    renderSection(node: SchemaNode): string {
+    renderSection(node: RenderableSchema): string {
         if (!node) return '';
         switch (node.type) {
             case 'section':
@@ -23,36 +25,36 @@ export class SectionRenderer {
                 return this.renderGeneric(node);
         }
     }
-    private renderContainer(node: SchemaNode): string {
+    private renderContainer(node: RenderableSchema): string {
         const childrenHtml = node.children.map(child => this.renderSection(child)).join('');
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}">\n${childrenHtml}\n</${node.tag}>`;
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}">\n${childrenHtml}\n</${node.tag}>`;
     }
-    private renderHeading(node: SchemaNode): string {
-        const childrenHtml = node.children.map(child => this.renderSection(child)).join('');
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}">${childrenHtml}${node.value || ''}</${node.tag}>`;
+    private renderHeading(node: RenderableSchema): string {
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}">${this.escapeHtml(node.value || '')}</${node.tag}>`;
     }
-    private renderList(node: SchemaNode): string {
+    private renderList(node: RenderableSchema): string {
         const childrenHtml = node.children.map(child => this.renderSection(child)).join('\n');
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}">\n${childrenHtml}\n</${node.tag}>`;
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}">\n${childrenHtml}\n</${node.tag}>`;
     }
-    private renderListItem(node: SchemaNode): string {
+    private renderListItem(node: RenderableSchema): string {
         const childrenHtml = node.children.map(child => this.renderSection(child)).join('');
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}">${childrenHtml}</${node.tag}>`;
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}">${childrenHtml}</${node.tag}>`;
     }
-    private renderIcon(node: SchemaNode): string {
+    private renderIcon(node: RenderableSchema): string {
         const iconName = node.value;
-        if (iconName) return `<i class="${node.selectorGroup}" data-icon="${iconName}" data-id="${node.id}" data-name="${node.name}"></i>`;
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}"></${node.tag}>`;
+        if (iconName) return `<i class="${node.tag}" data-icon="${iconName}" data-id="${node.id}" data-name="${node.name}"></i>`;
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}"></${node.tag}>`;
     }
-    private renderText(node: SchemaNode): string {
+    private renderText(node: RenderableSchema): string {
         const value = node.value || '';
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}">${this.escapeHtml(value)}</${node.tag}>`;
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}">${this.escapeHtml(value)}</${node.tag}>`;
     }
-    private renderGeneric(node: SchemaNode): string {
-        const childrenHtml = node.children.map(child => this.renderSection(child)).join('');
+    private renderGeneric(node: RenderableSchema): string {
+        const isTextElement = ["span", "text", "a", "h1", "h2", "h3", "h4", "h5", "h6"].includes(node.tag);
+        const childrenHtml = isTextElement ? "" : node.children.map(child => this.renderSection(child)).join('');
         const value = node.value || '';
-        const content = childrenHtml || value;
-        return `<${node.tag} class="${node.selectorGroup}" data-id="${node.id}" data-name="${node.name}">${content}</${node.tag}>`;
+        const content = childrenHtml || this.escapeHtml(value);
+        return `<${node.tag} class="${node.tag}" data-id="${node.id}" data-name="${node.name}">${content}</${node.tag}>`;
     }
     private escapeHtml(text: string): string {
         const htmlEntities: { [key: string]: string } = {

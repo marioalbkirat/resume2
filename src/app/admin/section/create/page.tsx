@@ -7,7 +7,7 @@ import { useSectionServices } from '@/context/section/SectionServicesContext';
 import { Content } from '@/types/resume/Content';
 import { Schema } from '@/types/resume/Section';
 
-const emptySchema = (name: string): Schema => ({ id: crypto.randomUUID(), tag: "section", type: "section", name, selectorGroup: "section", children: [] });
+const emptySchema = (name: string): Schema => ({ id: crypto.randomUUID(), tag: "section", type: "section", name, children: [] });
 
 export default function CreateSectionPage() {
     const router = useRouter();

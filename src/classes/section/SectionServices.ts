@@ -7,7 +7,7 @@ const fallbackSection = (): Section => ({
   target: "RESUME",
   visibility: "PRIVATE",
   authorId: "",
-  schema: { id: crypto.randomUUID(), tag: "section", type: "section", name: "Untitled", selectorGroup: "section", children: [] },
+  schema: { id: crypto.randomUUID(), tag: "section", type: "section", name: "Untitled", children: [] },
   content: {},
   createdAt: new Date(),
   updatedAt: new Date(),

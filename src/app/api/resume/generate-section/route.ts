@@ -94,7 +94,6 @@ function buildFallbackPayload(description: string, additionalRequirements?: stri
             name,
             tag: "span",
             type: "text",
-            selectorGroup: "span",
             children: [],
         };
     });
@@ -105,7 +104,6 @@ function buildFallbackPayload(description: string, additionalRequirements?: stri
             name: title,
             tag: "section",
             type: "section",
-            selectorGroup: "section",
             children,
         },
         content,
@@ -114,13 +112,10 @@ function buildFallbackPayload(description: string, additionalRequirements?: stri
 }
 
 function getAllowedChildren(tag: string): string[] {
-    if (tag === "img" || tag === "i") return [];
+    if (["img", "i", "span", "text", "a", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return [];
     if (tag === "ul") return ["li"];
     if (tag === "li") return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
     if (tag === "p") return ["span", "img", "i", "a"];
-    if (tag === "span") return ["span", "img", "i", "a"];
-    if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return ["span", "img", "i", "a"];
-    if (tag === "a") return ["span", "img", "i"];
     return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
 }
 
@@ -190,7 +185,6 @@ function normalizeSchema(node: Partial<Schema> | undefined, parentId?: string, f
         tag,
         type: TAG_TYPES[tag] || tag,
         role: tag === "i" && node?.role === "sectionIcon" ? "sectionIcon" : tag === "i" ? "default" : undefined,
-        selectorGroup: typeof node?.selectorGroup === "string" && node.selectorGroup.trim() ? node.selectorGroup.trim() : tag,
         parentId,
         children: Array.isArray(node?.children)
             ? node.children
@@ -229,14 +223,12 @@ function buildSchemaFromContent(sectionName: string, generatedContent: Generated
         name: title,
         tag: "section",
         type: "section",
-        selectorGroup: "section",
         children: [
             {
                 id: crypto.randomUUID(),
                 name: title,
                 tag: "h2",
                 type: "heading",
-                selectorGroup: "h2",
                 children: [],
             },
             {
@@ -244,20 +236,17 @@ function buildSchemaFromContent(sectionName: string, generatedContent: Generated
                 name: "list",
                 tag: "ul",
                 type: "list",
-                selectorGroup: "ul",
                 children: entries.map(([key, item]) => ({
                     id: crypto.randomUUID(),
                     name: "list_item",
                     tag: "li",
                     type: "listItem",
-                    selectorGroup: "li",
                     children: [
                         {
                             id: typeof item.id === "string" && item.id.trim() ? item.id.trim() : crypto.randomUUID(),
                             name: key,
                             tag: item.type === "heading" ? "h3" : item.type === "icon" ? "i" : item.type === "link" ? "a" : item.type === "image" ? "img" : "span",
                             type: item.type || "text",
-                            selectorGroup: item.type === "heading" ? "h3" : item.type === "icon" ? "i" : item.type === "link" ? "a" : item.type === "image" ? "img" : "span",
                             children: [],
                         },
                     ],
@@ -280,7 +269,7 @@ function normalizeContent(schema: Schema, generatedContent: GeneratedPayload["co
         flattenSchema(schema)
             .filter((node) => !TAGS_WITHOUT_VALUE.has(node.tag))
             .map((node) => {
-                const nodeKeys = [node.id, node.name, node.selectorGroup].filter(Boolean).map(normalizeKey);
+                const nodeKeys = [node.id, node.name, node.tag, node.type].filter(Boolean).map(normalizeKey);
                 const original = normalizedInput.find((entry) =>
                     nodeKeys.includes(entry.key) || nodeKeys.includes(entry.id) || nodeKeys.includes(entry.propName)
                 )?.item;
@@ -333,14 +322,12 @@ Return ONLY valid JSON with this exact shape:
     "name": "section title",
     "tag": "section",
     "type": "section",
-    "selectorGroup": "section",
     "children": [
       {
         "id": "uuid",
         "name": "field_name",
         "tag": "span",
         "type": "text",
-        "selectorGroup": "span",
         "children": []
       }
     ]
@@ -351,10 +338,10 @@ Return ONLY valid JSON with this exact shape:
   "explanation": "short explanation"
 }
 Schema rules:
-- Root schema must be tag/type/selectorGroup section.
+- Root schema must be tag/type section.
 - Allowed tags: ${ALLOWED_TAGS.join(", ")}.
 - Use type mapping: ${JSON.stringify(TAG_TYPES)}.
-- Every schema node needs name, tag, type, selectorGroup, and children array.
+- Every schema node needs name, tag, type, and children array.
 - Do not put content values on section, div, ul, or li nodes.
 - Put text values in content entries for p, span, headings, a, i, and img nodes.
 - For icons, value must be a react-icons/fa name such as FaBriefcase, FaGraduationCap, FaCode, or FaAward.
@@ -384,7 +371,7 @@ Schema rules:
         if (!aiContent) {
             const details = getProviderErrorMessage(result) || "The AI provider returned an empty response.";
             const fallback = buildFallbackPayload(description, additionalRequirements, sectionName);
-            const fallbackSchema = normalizeSchema({ ...fallback.schema, tag: "section", type: "section", selectorGroup: "section" }, undefined, fallback.schema?.name || "Generated Section");
+            const fallbackSchema = normalizeSchema({ ...fallback.schema, tag: "section", type: "section" }, undefined, fallback.schema?.name || "Generated Section");
             return NextResponse.json({
                 schema: fallbackSchema,
                 content: normalizeContent(fallbackSchema, fallback.content),
@@ -394,7 +381,7 @@ Schema rules:
         }
 
         const generated = extractJson(aiContent);
-        const requestedSchema = { ...generated.schema, tag: "section", type: "section", selectorGroup: "section" };
+        const requestedSchema = { ...generated.schema, tag: "section", type: "section" };
         const initialSchema = normalizeSchema(requestedSchema, undefined, generated.schema?.name || "Generated Section");
         const schema = hasRenderableChildren(initialSchema)
             ? initialSchema

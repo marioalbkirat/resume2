@@ -17,7 +17,7 @@ export interface CreateSectionProps {
     onSave: (section: Section) => void;
 }
 
-const emptySchema = (name: string): Schema => ({ id: crypto.randomUUID(), tag: "section", type: "section", name, selectorGroup: "section", children: [] });
+const emptySchema = (name: string): Schema => ({ id: crypto.randomUUID(), tag: "section", type: "section", name, children: [] });
 
 export default function CreateSection({ isOpen, onClose, sectionName, initialSchema, initialContent, onSave }: CreateSectionProps) {
     const { createSection } = useSectionServices();

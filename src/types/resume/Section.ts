@@ -7,7 +7,6 @@ export interface Schema {
     type: string;
     tag: string;
     role?: "default" | "sectionIcon";
-    selectorGroup: string;
     children: Schema[];
     parentId?: string;
 }

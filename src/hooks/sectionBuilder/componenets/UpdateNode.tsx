@@ -54,14 +54,14 @@ export default function UpdateNode({
 
                 ${currentType === 'heading' ? `
                     <div style="margin-bottom: 16px;">
-                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">HTML Tag</label>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Title size</label>
                         <select id="swal-tag" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-sizing: border-box; font-size: 14px;">
-                            <option value="h1" ${node.tag === 'h1' ? 'selected' : ''}>h1</option>
-                            <option value="h2" ${node.tag === 'h2' ? 'selected' : ''}>h2</option>
-                            <option value="h3" ${node.tag === 'h3' ? 'selected' : ''}>h3</option>
-                            <option value="h4" ${node.tag === 'h4' ? 'selected' : ''}>h4</option>
-                            <option value="h5" ${node.tag === 'h5' ? 'selected' : ''}>h5</option>
-                            <option value="h6" ${node.tag === 'h6' ? 'selected' : ''}>h6</option>
+                            <option value="h1" ${node.tag === 'h1' ? 'selected' : ''}>Main title</option>
+                            <option value="h2" ${node.tag === 'h2' ? 'selected' : ''}>Subtitle</option>
+                            <option value="h3" ${node.tag === 'h3' ? 'selected' : ''}>Section title</option>
+                            <option value="h4" ${node.tag === 'h4' ? 'selected' : ''}>Minimal title</option>
+                            <option value="h5" ${node.tag === 'h5' ? 'selected' : ''}>Small title</option>
+                            <option value="h6" ${node.tag === 'h6' ? 'selected' : ''}>Caption title</option>
                         </select>
                     </div>
                 ` : ''}

@@ -10,7 +10,7 @@ export type ColorTarget = { scope: "global" | "selector" | "element"; key: strin
 
 export const defaultGlobalStyle: StyleObject = { fontFamily: "Arial", backgroundColor: "#ffffff" };
 export const emptyResumeStyle: ResumeStyle = { global: defaultGlobalStyle, selectors: {}, elements: {}, customCSS: "" };
-export const selectorGroups: VisualGroup[] = ["section", "heading", "paragraph", "text", "list", "listItem", "icon", "image", "link", "container"];
+export const visualGroups: VisualGroup[] = ["section", "heading", "paragraph", "text", "list", "listItem", "icon", "image", "link", "container"];
 export const fonts = [
   { id: "inter", name: "Inter", value: "Inter, ui-sans-serif, system-ui" },
   { id: "serif", name: "Classic", value: "Georgia, 'Times New Roman', serif" },
@@ -41,8 +41,8 @@ export const toCss = (style?: StyleObject) => (style ?? {}) as CSSProperties;
 export const numberValue = (value: string | number | undefined, fallback: number) => { const parsed = Number.parseFloat(String(value ?? "")); return Number.isFinite(parsed) ? parsed : fallback; };
 export const withPx = (value: string | number) => `${value}px`;
 
-export function getVisualGroup(node?: Pick<Schema, "tag" | "type" | "selectorGroup"> | null): VisualGroup {
-  const text = `${node?.tag ?? ""} ${node?.type ?? ""} ${node?.selectorGroup ?? ""}`.toLowerCase();
+export function getVisualGroup(node?: Pick<Schema, "tag" | "type"> | null): VisualGroup {
+  const text = `${node?.tag ?? ""} ${node?.type ?? ""}`.toLowerCase();
   if (/img|image|photo|avatar|logo/.test(text)) return "image";
   if (/icon|svg|\bi\b/.test(text)) return "icon";
   if (/li|listitem/.test(text)) return "listItem";
