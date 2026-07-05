@@ -1,18 +1,10 @@
 // D:\cvBuilder\resumebuilder\src\hooks\sectionBuilder\SectionPreview.tsx
 import defaultStyles from "@/defaultStyle";
-import * as Icons from "react-icons/fa";
+import IconPreview from "@/hooks/PickIcons/icons/IconPreview";
 import React, { CSSProperties, JSX } from "react";
 import { Schema } from "@/types/resume/Section";
-import { IconType } from "react-icons";
 import { Content } from "@/types/resume/Content";
 import { useSectionBuilder } from "./useSectionBuilder";
-
-const iconMap: Record<string, IconType> = {};
-Object.keys(Icons).forEach((key) => {
-    if (key.startsWith("Fa")) {
-        iconMap[key] = Icons[key as keyof typeof Icons] as IconType;
-    }
-});
 
 const getStyle = (tag: string): CSSProperties => {
     return defaultStyles[tag as keyof typeof defaultStyles] || {};
@@ -32,18 +24,16 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     const style: CSSProperties = getStyle(tag);
 
     if (tag === 'i') {
-        const IconComponent = iconMap[value as string];
-        if (IconComponent) {
-            return (
-                <IconComponent
-                    style={style}
-                    data-id={id}
-                    title={props.title}
-                    data-icon={value}
-                />
-            );
-        }
-        return <span style={style} data-id={id} title={props.title}>🔹</span>;
+        return (
+            <IconPreview
+                name={value || "FaUser"}
+                style={style}
+                data-id={id}
+                data-title={props.title}
+                data-icon={value}
+                fallbackClassName="inline-block h-5 w-5 rounded bg-gray-200 align-middle"
+            />
+        );
     }
 
     if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
