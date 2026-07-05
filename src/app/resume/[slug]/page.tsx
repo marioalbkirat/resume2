@@ -15,15 +15,10 @@ export default async function ActiveResumePage({ params }: { params: Promise<{ s
     const sections = toResumeSections(draft.schema);
 
     return (
-        <main className="min-h-screen bg-slate-100 px-4 py-8">
-            <article className="mx-auto w-fit rounded-2xl bg-white p-8 shadow-xl">
-                <div className="mb-6 border-b border-slate-200 pb-4 print:hidden">
-                    <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">Active resume</p>
-                    <h1 className="mt-1 text-3xl font-bold text-slate-900">{draft.title}</h1>
-                </div>
-                {style.customCSS && <style>{style.customCSS}</style>}
-                <BuildLayout sections={sections} settings={settings} distribution={distribution} content={draft.content as Record<string, Content>} mode="preview" style={style} pageCount={1} />
-            </article>
+        <main className="min-h-screen px-4 py-8 mx-auto w-fit">
+            <a href={`/api/resume/download/${slug}`} className="mb-4 inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 print:hidden">Download PDF</a>
+            {style.customCSS && <style>{style.customCSS}</style>}
+            <BuildLayout sections={sections} settings={settings} distribution={distribution} content={draft.content as Record<string, Content>} mode="preview" style={style} pageCount={1} />
         </main>
     );
 }
