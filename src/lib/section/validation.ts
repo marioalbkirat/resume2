@@ -11,7 +11,7 @@ export type SectionForm = {
 
 const targets = ["RESUME", "PORTFOLIO"];
 const visibilities = ["OFFICIAL", "COMMUNITY", "PRIVATE"];
-const childlessTextTags = new Set(["h1", "h2", "h3", "h4", "h5", "h6", "span", "text", "a"]);
+const childlessTextTags = new Set(["img", "i", "text"]);
 
 function sanitizeSchema(input: Schema, parentId?: string): Schema {
   const { id, name, tag, type, role } = input;

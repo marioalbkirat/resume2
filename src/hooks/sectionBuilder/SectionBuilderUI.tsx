@@ -20,7 +20,10 @@ export default function SectionBuilderUI({ sectionName, schema, content, onExpor
     const builder = useSectionBuilder({ initialSchema: schema ? { ...schema, name: sectionName } : undefined, initialContent: content, sectionName });
     const contentCount = Object.keys(builder.getAllContent()).length;
 
-    const exportCurrent = () => onExport?.({ ...builder.exportData(), schema: { ...builder.exportData().schema, name: sectionName } });
+    const exportCurrent = () => {
+        const currentData = builder.exportData();
+        onExport?.({ ...currentData, schema: { ...currentData.schema, name: sectionName } });
+    };
 
     return (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -39,7 +42,7 @@ export default function SectionBuilderUI({ sectionName, schema, content, onExpor
                 </div>
             </div>
             {advancedMode ? <div className="p-4"><div className="grid grid-cols-2 gap-6 h-full max-h-125"><div className="border-r border-gray-200 pr-6"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-gray-600">📁 Structure Tree</span><span className="text-xs text-gray-400">{contentCount} elements</span></div><div className="overflow-auto max-h-150"><TreeNode builder={builder} isRoot={true} /></div></div><div className="pl-6"><div className="flex items-center justify-between mb-3"><span className="text-sm font-medium text-gray-600">👁️ Preview</span><span className="text-xs text-green-500 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>Live</span></div><div className="overflow-auto max-h-150 p-4 bg-gray-50 rounded-lg border border-gray-200"><SectionPreview builder={builder} /></div></div></div></div> : <div className="p-8 text-center text-gray-600"><p className="text-lg font-medium text-gray-800">Describe the section you want.</p><p className="mt-2">Example: “Languages section with language name and proficiency level.”</p><button onClick={() => setShowAIModal(true)} className="mt-5 inline-flex items-center gap-2 px-5 py-3 bg-purple-600 text-white rounded-lg"><FiCpu />Open AI generator</button></div>}
-            {showAIModal && <AIGenerateModal builder={builder} sectionName={sectionName} onGenerated={() => { setAdvancedMode(true); exportCurrent(); }} onClose={() => setShowAIModal(false)} />}
+            {showAIModal && <AIGenerateModal builder={builder} sectionName={sectionName} onGenerated={(generatedData) => { setAdvancedMode(true); onExport?.(generatedData); }} onClose={() => setShowAIModal(false)} />}
         </div>
     );
 }
