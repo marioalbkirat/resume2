@@ -8,10 +8,10 @@ export class SectionContent {
 
     createContent(content: Record<string, Content>, nodeId: string, tag: string, type: string, value = "", props?: Record<string, string>): Record<string, Content> {
         if (content[nodeId] || this.schemaControl.getTagsWithoutValue().includes(tag)) return content;
-        const defaults = this.getDefaultContent(type);
+        const defaults = this.getDefaultContent(type || tag);
         const prop = { ...defaults.props, ...(props ?? {}) };
-        const nextValue = this.validation.validateContentValue(tag, value || defaults.value);
-        if (!["img", "i"].includes(tag) && prop.title) prop.title = this.validation.validateFieldTitle(prop.title);
+        const nextValue = this.validation.safeValidateContentValue(tag, value || defaults.value, defaults.value);
+        if (!["img", "i"].includes(tag) && prop.title) prop.title = this.validation.safeValidateFieldTitle(prop.title, defaults.props.title);
         if (tag === "img") {
             prop.src = prop.src || nextValue;
             prop.alt = prop.alt || "Image";
@@ -24,7 +24,7 @@ export class SectionContent {
 
     updateContentValue(content: Record<string, Content>, nodeId: string, tag: string, value: string): Record<string, Content> {
         if (!content[nodeId]) return content;
-        return { ...content, [nodeId]: { ...content[nodeId], value: this.validation.validateContentValue(tag, value) } };
+        return { ...content, [nodeId]: { ...content[nodeId], value: this.validation.safeValidateContentValue(tag, value, content[nodeId].value) } };
     }
 
     updateContentProps(content: Record<string, Content>, nodeId: string, props: Record<string, string>): Record<string, Content> {
@@ -47,7 +47,8 @@ export class SectionContent {
             text: { value: "Text content", props: { title: "Text field" } },
             paragraph: { value: "Paragraph content", props: { title: "Paragraph field" } },
         };
-        return defaults[type] || { value: "", props: {} };
+        const resolvedType = this.schemaControl.getAlias()[type] || type;
+        return defaults[resolvedType] || { value: "", props: {} };
     }
 
     toArray(content: Record<string, Content>): Content[] { return Object.values(content); }
