@@ -4,7 +4,7 @@ import { Content } from "@/types/resume/Content";
 import { Distribution } from "@/types/resume/Distribution";
 import { Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
-import { CSSProperties, useMemo } from "react";
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { ResumeStyle } from "@/types/resume/ResumeStyle";
 import { FiPlus } from "react-icons/fi";
 import NodeRenderer from "./jsonToHtml/NodeRenderer";
@@ -50,6 +50,9 @@ const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
   return { safeStyle, background, padding };
 };
 
+const pageDimensions = (pageSize: Settings["pageSize"]) => ({ width: pageSize === "A4" ? 210 : 215.9, height: pageSize === "A4" ? 297 : 279.4 });
+const millimetersToPixels = (millimeters: number) => millimeters * (96 / 25.4);
+
 const parseMillimeterValue = (value: unknown) => {
   const parsed = Number.parseFloat(String(value ?? ""));
   return Number.isFinite(parsed) ? parsed : null;
@@ -83,26 +86,27 @@ const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSiz
 
 export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style, pageCount = 1 }: BuildLayoutProps) {
   const isEditable = mode === "edit";
+  const measuredFlowRef = useRef<HTMLDivElement>(null);
+  const [measuredPageCount, setMeasuredPageCount] = useState(pageCount);
+  const dimensions = pageDimensions(settings.pageSize);
+
   const pageSizeStyle = useMemo<CSSProperties>(() => {
     const { safeStyle, background, padding } = getPageGlobalStyle(style?.global);
     const fallbackBackgroundColor = background === undefined ? undefined : String(background);
 
-    const singlePageHeight = settings.pageSize === "A4" ? 297 : 279.4;
-    const totalPageHeight = `${singlePageHeight * Math.max(1, pageCount)}mm`;
-
     return {
       ...safeStyle,
       boxSizing: "border-box",
-      width: settings.pageSize === "A4" ? "210mm" : "215.9mm",
-      height: totalPageHeight,
-      minHeight: totalPageHeight,
+      width: `${dimensions.width}mm`,
+      height: `${dimensions.height}mm`,
+      minHeight: `${dimensions.height}mm`,
       padding: settings.columns === "ONE" ? padding : undefined,
       margin: 0,
       boxShadow: "0 0 3px rgba(0,0,0,0.2)",
       backgroundColor: settings.columns === "ONE" ? String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white") : "white",
-      overflow: "visible",
+      overflow: "hidden",
     };
-  }, [pageCount, settings.columns, settings.pageSize, style?.global]);
+  }, [dimensions.height, dimensions.width, settings.columns, style?.global]);
 
   const columnStyle = useMemo(() => {
     const { leftWidth, rightWidth } = getColumnWidths(style?.global, settings.pageSize);
@@ -154,9 +158,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
     );
   };
 
-  if (settings.columns === "ONE") {
-    return <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}><div data-resume-flow="true">{sortedSections.map(renderSection)}</div></div>;
-  }
+  const renderOneColumnContent = () => <div data-resume-flow="true">{sortedSections.map(renderSection)}</div>;
 
   const left = sortedSections.filter((section) => distribution[section.id]?.position !== "right");
   const right = sortedSections.filter((section) => distribution[section.id]?.position === "right");
@@ -171,11 +173,51 @@ export default function BuildLayout({ sections, settings, distribution, content 
     ? `${columnStyle.leftWidth} ${dividerColumn} ${columnStyle.rightWidth}`
     : `${columnStyle.rightWidth} ${dividerColumn} ${columnStyle.leftWidth}`;
 
+  const renderTwoColumnContent = () => (
+    <div data-resume-flow="true" style={{ display: "grid", gridTemplateColumns, columnGap: "12px" }}>
+      {sidebarLeft ? <>{sidebar}{divider}{main}</> : <>{main}{divider}{sidebar}</>}
+    </div>
+  );
+
+  const renderPageContent = () => settings.columns === "ONE" ? renderOneColumnContent() : renderTwoColumnContent();
+
+  useEffect(() => {
+    if (mode !== "preview") return;
+
+    const updateMeasuredPages = () => {
+      const flow = measuredFlowRef.current?.querySelector<HTMLElement>("[data-resume-flow=\"true\"]");
+      if (!flow) return;
+      const next = Math.max(1, Math.ceil(flow.scrollHeight / millimetersToPixels(dimensions.height)));
+      requestAnimationFrame(() => setMeasuredPageCount(current => current === next ? current : next));
+    };
+
+    updateMeasuredPages();
+    const observer = new ResizeObserver(updateMeasuredPages);
+    if (measuredFlowRef.current) observer.observe(measuredFlowRef.current);
+    const flow = measuredFlowRef.current?.querySelector<HTMLElement>("[data-resume-flow=\"true\"]");
+    if (flow) observer.observe(flow);
+    return () => observer.disconnect();
+  }, [content, dimensions.height, distribution, mode, pageCount, sections, settings, style]);
+
+  if (mode !== "preview") {
+    return <div id="resume" dir={settings.direction.toLowerCase()} style={{ ...pageSizeStyle, height: `${dimensions.height * Math.max(1, pageCount)}mm`, minHeight: `${dimensions.height * Math.max(1, pageCount)}mm`, overflow: "visible" }}>{renderPageContent()}</div>;
+  }
+
+  const pages = Array.from({ length: measuredPageCount }, (_, index) => index);
+  const pageGap = "24px";
+
   return (
-    <div id="resume" dir={settings.direction.toLowerCase()} style={pageSizeStyle}>
-      <div data-resume-flow="true" style={{ display: "grid", gridTemplateColumns, columnGap: "12px" }}>
-        {sidebarLeft ? <>{sidebar}{divider}{main}</> : <>{main}{divider}{sidebar}</>}
+    <div id="resume" dir={settings.direction.toLowerCase()} style={{ display: "grid", gap: pageGap }}>
+      <div aria-hidden="true" ref={measuredFlowRef} style={{ ...pageSizeStyle, height: "auto", minHeight: `${dimensions.height}mm`, overflow: "visible", position: "absolute", visibility: "hidden", pointerEvents: "none" }}>
+        {renderPageContent()}
       </div>
+      {pages.map((pageIndex) => (
+        <div key={pageIndex} data-resume-page={pageIndex + 1} style={{ ...pageSizeStyle, position: "relative" }}>
+          <div style={{ transform: `translateY(-${pageIndex * dimensions.height}mm)` }}>
+            {renderPageContent()}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
