@@ -46,6 +46,8 @@ type ResumeBuilderContextType = {
     updateContent: (sectionId: string, nodeId: string, value: string, props?: Record<string, string>) => void;
     addListItem: (sectionId: string, listNodeId: string) => void;
     deleteListItem: (sectionId: string, listItemId: string) => void;
+    deleteDraft: (draftId: string) => Promise<void>;
+    deletePrivateTemplate: (templateId: string) => Promise<void>;
 };
 
 const ResumeBuilderContext = createContext<ResumeBuilderContextType | null>(null);
@@ -229,9 +231,32 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         });
     }, [sections]);
 
+
+    const deleteDraft = useCallback(async (draftId: string) => {
+        const response = await fetch("/api/resume/resume-draft", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: draftId }),
+        });
+        if (!response.ok) throw new Error("Failed to delete draft");
+        setDrafts(previous => previous.filter(draft => draft.id !== draftId));
+        setActiveDraft(previous => previous?.id === draftId ? null : previous);
+    }, []);
+
+    const deletePrivateTemplate = useCallback(async (templateId: string) => {
+        const response = await fetch("/api/resume/resume-template", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: templateId }),
+        });
+        if (!response.ok) throw new Error("Failed to delete private template");
+        setTemplates(previous => previous.filter(template => template.id !== templateId));
+        setSelectedResume(previous => previous?.id === templateId ? null : previous);
+    }, []);
+
     const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
 
-    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
+    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem, deleteDraft, deletePrivateTemplate }}>{children}</ResumeBuilderContext.Provider>;
 }
 
 export function useResumeBuilder() { const context = useContext(ResumeBuilderContext); if (!context) throw new Error("useResumeBuilder must be used inside ResumeBuilderProvider"); return context; }

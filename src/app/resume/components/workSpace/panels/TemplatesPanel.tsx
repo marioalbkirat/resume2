@@ -5,7 +5,7 @@ import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import { ResumeTemplate } from "@/types/resume/ResumeTemplate";
 
 export default function TemplatesPanel() {
-    const { templates, selectedResume, activateTemplate } = useResumeBuilder();
+    const { templates, selectedResume, activateTemplate, deletePrivateTemplate } = useResumeBuilder();
     const [searchTerm, setSearchTerm] = useState("");
     const [activeCategory, setActiveCategory] = useState<string>("all");
     const [activeSource, setActiveSource] = useState<"OFFICIAL" | "COMMUNITY" | "PRIVATE">("OFFICIAL");
@@ -29,11 +29,19 @@ export default function TemplatesPanel() {
         if (temp) activateTemplate(temp);
     };
 
+    const handleDeletePrivateTemplate = async (id: string) => {
+        const template = templates.find(item => item.id === id);
+        if (!template || template.visibility !== "PRIVATE") return;
+        const confirmed = window.confirm(`Delete private template "${template.name}"? This cannot be undone.`);
+        if (!confirmed) return;
+        await deletePrivateTemplate(id);
+    };
+
     return (
         <div className="space-y-6">
             <TemplatesFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeSource={activeSource} setActiveSource={setActiveSource} categories={categories} getTemplatesBySource={getTemplatesBySource} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} views={template.views} downloads={template.downloads} likes={template.likes} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} />)}
+                {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} views={template.views} downloads={template.downloads} likes={template.likes} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} onDelete={template.visibility === "PRIVATE" ? handleDeletePrivateTemplate : undefined} />)}
             </div>
         </div>
     );

@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { FiEye, FiHeart, FiDownload } from "react-icons/fi";
+import { FiEye, FiHeart, FiDownload, FiTrash2 } from "react-icons/fi";
 interface ResumeCardWorkspaceProps {
     id: string;
     name: string;
@@ -11,6 +11,7 @@ interface ResumeCardWorkspaceProps {
     isSelected?: boolean;
     authorName?: string;
     onClick: (id: string) => void;
+    onDelete?: (id: string) => void;
 }
 export default function ResumeCardWorkspace({
     id,
@@ -21,7 +22,8 @@ export default function ResumeCardWorkspace({
     likes,
     isSelected = false,
     authorName,
-    onClick
+    onClick,
+    onDelete
 }: ResumeCardWorkspaceProps) {
     const formatNumber = (num: number): string => {
         if (num >= 10000) return `${(num / 1000).toFixed(0)}k`;
@@ -68,6 +70,11 @@ export default function ResumeCardWorkspace({
                             <FiDownload className="w-3 h-3" /> {formatNumber(downloads)}
                         </span>
                     </div>
+                    {onDelete && (
+                        <button type="button" onClick={(event) => { event.stopPropagation(); onDelete(id); }} className="rounded-full p-1.5 text-red-500 transition hover:bg-red-50 hover:text-red-700" title="Delete private template" aria-label={`Delete ${name}`}>
+                            <FiTrash2 className="h-4 w-4" />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

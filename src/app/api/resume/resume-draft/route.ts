@@ -89,3 +89,19 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ error: "Failed to update draft", details: error }, { status: 400 });
     }
 }
+
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { id } = await request.json();
+        if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+        const existing = await prisma.resumeDraft.findFirst({ where: { id, userId: DEMO_USER_ID } });
+        if (!existing) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
+
+        await prisma.resumeDraft.delete({ where: { id } });
+        return NextResponse.json({ id });
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to delete draft", details: error }, { status: 400 });
+    }
+}
