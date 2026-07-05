@@ -87,11 +87,24 @@ const collectFields = (schema: Record<string, Schema>, content: Record<string, C
 
 const parseJson = (value: string) => JSON.parse(value.replace(/```json|```/g, "").trim());
 
-const heuristicResumeScore = (text: string) => {
+const getResumeSignals = (text: string) => {
     const lower = text.toLowerCase();
-    const positives = ["experience", "education", "skills", "email", "phone", "linkedin", "summary", "work", "project", "certification", "resume", "cv", "الخبرة", "التعليم", "المهارات", "البريد", "الهاتف", "الجوال", "ملخص", "العمل", "مشروع", "الشهادات", "السيرة"];
-    const negatives = ["chapter", "isbn", "publisher", "table of contents", "novel", "copyright", "appendix"];
-    return positives.filter(word => lower.includes(word)).length - negatives.filter(word => lower.includes(word)).length * 2;
+    const positives = [
+        "experience", "employment", "education", "skills", "email", "phone", "linkedin", "github", "portfolio", "summary", "profile", "work", "project", "certification", "resume", "cv",
+        "الخبرة", "خبرة", "التعليم", "المؤهل", "المؤهلات", "المهارات", "مهارات", "البريد", "الإيميل", "الايميل", "الهاتف", "الجوال", "موبايل", "ملخص", "نبذة", "العمل", "عمل", "مشروع", "مشاريع", "الشهادات", "الدورات", "السيرة", "الذاتية",
+    ];
+    const negatives = ["chapter", "isbn", "publisher", "table of contents", "novel", "copyright", "appendix", "فصل", "الناشر", "حقوق الطبع", "الفهرس"];
+    const email = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(text);
+    const phone = /(?:\+?\d[\d\s().-]{7,}\d)/.test(text);
+    const url = /(?:https?:\/\/|www\.|linkedin\.com|github\.com)/i.test(text);
+    const positiveScore = positives.filter(word => lower.includes(word)).length + Number(email) + Number(phone) + Number(url);
+    const negativeScore = negatives.filter(word => lower.includes(word)).length;
+    return { positiveScore, negativeScore, hasContactInfo: email || phone || url };
+};
+
+const looksObviouslyUnrelated = (text: string) => {
+    const { positiveScore, negativeScore, hasContactInfo } = getResumeSignals(text);
+    return negativeScore >= 2 && positiveScore < 2 && !hasContactInfo;
 };
 
 const fallbackContent = (fields: Field[], text: string, previous: Record<string, Content> = {}) => {
@@ -121,7 +134,7 @@ export async function POST(request: NextRequest) {
         if (buffer.subarray(0, 4).toString() !== "%PDF") return NextResponse.json({ error: "Invalid PDF file." }, { status: 400 });
         const extractedText = extractPdfText(buffer);
         if (extractedText.length < 80) return NextResponse.json({ error: "Could not extract enough readable resume text from this PDF." }, { status: 422 });
-        if (heuristicResumeScore(extractedText) < 2) return NextResponse.json({ error: "This PDF does not look like a resume/CV. Please upload a relevant resume or CV, not a book or unrelated file." }, { status: 422 });
+        if (looksObviouslyUnrelated(extractedText)) return NextResponse.json({ error: "This PDF does not look like a resume/CV. Please upload a relevant resume or CV, not a book or unrelated file." }, { status: 422 });
         const fields = collectFields(body.schema ?? {}, body.content ?? {});
         if (!fields.length) return NextResponse.json({ error: "No editable resume fields are available to fill." }, { status: 400 });
 
