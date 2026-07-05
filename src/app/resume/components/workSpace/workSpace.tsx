@@ -6,11 +6,13 @@ import SectionsPanel from "./panels/SectionsPanel";
 import StylesPanel from "./panels/StylesPanel";
 import AIToolsPanel from "./panels/AIToolsPanel";
 import SettingsPanel from "./panels/SettingsPanel";
+import DraftsPanel from "./panels/DraftsPanel";
 export default function ResumeWorkSpace() {
     const { selectedResume } = useResumeBuilder();
     const [activeTab, setActiveTab] = useState<string>("templates");
     const tabs = [
         { id: "templates", label: "Templates", icon: "📄" },
+        { id: "drafts", label: "Drafts", icon: "📝" },
         { id: "sections", label: "Sections", icon: "📑" },
         { id: "styles", label: "Styles", icon: "🎨" },
         { id: "ai-tools", label: "AI Tools", icon: "🤖" },
@@ -20,6 +22,8 @@ export default function ResumeWorkSpace() {
         switch (activeTab) {
             case "templates":
                 return <TemplatesPanel />;
+            case "drafts":
+                return <DraftsPanel />;
             case "sections":
                 return <SectionsPanel />;
             case "styles":
