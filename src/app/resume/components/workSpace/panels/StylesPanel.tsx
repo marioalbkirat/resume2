@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { FiAlignCenter, FiAlignJustify, FiAlignLeft, FiAlignRight, FiRefreshCw, FiSquare } from "react-icons/fi";
-import { ColorTarget, VisualGroup, fonts, getVisualGroup, numberValue, selectorGroups, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
+import { ColorTarget, VisualGroup, fonts, getVisualGroup, numberValue, visualGroups, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
 import { StyleObject } from "@/types/resume/ResumeStyle";
 
 const cardClass = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
@@ -119,7 +119,7 @@ export default function StylesPanel() {
   const [selector, setSelector] = useState<string>("section");
   const selectorOptions = useMemo(() => {
     const templateSelectors = Object.keys(style.selectors ?? {}).filter(Boolean);
-    return templateSelectors.length > 0 ? templateSelectors : selectorGroups;
+    return templateSelectors.length > 0 ? templateSelectors : visualGroups;
   }, [style.selectors]);
   const selectedPatch = style.elements?.[selectedNode?.id ?? ""] ?? {};
   const pageWidth = pageWidths[settings.pageSize];
@@ -129,7 +129,7 @@ export default function StylesPanel() {
   const updateRightColumn = (value: number) => updateGlobal({ leftColumnWidth: `${Number((pageWidth - value).toFixed(1))}mm`, rightColumnWidth: `${value}mm` });
 
   const activeSelector = selectorOptions.includes(selector) ? selector : selectorOptions[0] ?? "section";
-  const groupForSelector = (value: string): VisualGroup => getVisualGroup({ tag: value, type: value, selectorGroup: value });
+  const groupForSelector = (value: string): VisualGroup => getVisualGroup({ tag: value, type: value });
 
   const renderSelect = (label: string, value: string | number | undefined, options: { label: string; value: string }[], onChange: (value: string) => void) => <label className="block rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-700"><span className="mb-2 block">{label}</span><select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500"><option value="">Default</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 

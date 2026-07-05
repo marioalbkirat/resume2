@@ -25,11 +25,11 @@ interface NodeRendererProps {
 
 const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     if (!node) return null;
-    const { tag, children, name, id, selectorGroup } = node;
+    const { tag, children, name, id } = node;
     const content = getContent(id);
     const value = content?.value || '';
     const props = content?.prop || {};
-    const style: CSSProperties = getStyle(selectorGroup || tag);
+    const style: CSSProperties = getStyle(tag);
 
     if (tag === 'i') {
         const IconComponent = iconMap[value as string];
@@ -47,24 +47,14 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     }
 
     if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
-        const iconChild = children?.find((c: Schema) => c.tag === 'i');
-        const textChildren = children?.filter((c: Schema) => c.tag !== 'i');
         const Tag = tag as keyof JSX.IntrinsicElements;
-        return (
-            <Tag style={style} data-id={id} data-name={name} className={selectorGroup || tag}>
-                {iconChild && <NodeRenderer node={iconChild} getContent={getContent} />}
-                {value}
-                {textChildren?.map((child: Schema) => (
-                    <NodeRenderer key={child.id} node={child} getContent={getContent} />
-                ))}
-            </Tag>
-        );
+        return <Tag style={style} data-id={id} data-name={name} className={tag}>{value}</Tag>;
     }
 
     if (tag === 'li') {
         const Tag = tag as keyof JSX.IntrinsicElements;
         return (
-            <Tag style={style} data-id={id} data-name={name} className={selectorGroup || tag}>
+            <Tag style={style} data-id={id} data-name={name} className={tag}>
                 {children?.map((child: Schema) => (
                     <NodeRenderer key={child.id} node={child} getContent={getContent} />
                 ))}
@@ -75,7 +65,7 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     if (tag === 'ul') {
         const Tag = tag as keyof JSX.IntrinsicElements;
         return (
-            <Tag style={style} data-id={id} data-name={name} className={selectorGroup || tag}>
+            <Tag style={style} data-id={id} data-name={name} className={tag}>
                 {children?.map((child: Schema) => (
                     <NodeRenderer key={child.id} node={child} getContent={getContent} />
                 ))}
@@ -92,7 +82,7 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
                 style={style}
                 data-id={id}
                 data-name={name}
-                className={selectorGroup || tag}
+                className={tag}
             />
         );
     }
@@ -100,23 +90,15 @@ const NodeRenderer = ({ node, getContent }: NodeRendererProps) => {
     if (tag === "a") {
         const Tag = tag as keyof JSX.IntrinsicElements;
         return (
-            <Tag
-                href={props.href as string || "#"}
-                style={style}
-                data-id={id}
-                data-name={name}
-                className={selectorGroup || tag}
-            >
-                {value || children?.map((child: Schema) => (
-                    <NodeRenderer key={child.id} node={child} getContent={getContent} />
-                ))}
+            <Tag href={props.href as string || "#"} style={style} data-id={id} data-name={name} className={tag}>
+                {value}
             </Tag>
         );
     }
 
     const Tag = tag as keyof JSX.IntrinsicElements;
     return (
-        <Tag style={style} data-id={id} data-name={name} className={selectorGroup || tag}>
+        <Tag style={style} data-id={id} data-name={name} className={tag}>
             {value}
             {children?.map((child: Schema) => (
                 <NodeRenderer key={child.id} node={child} getContent={getContent} />
@@ -133,14 +115,14 @@ export default function SectionPreview({ builder }: SectionPreviewProps) {
     const { schema, getContent } = builder;
     if (!schema) return <div className="text-gray-400 text-center py-8">No section to preview</div>;
     
-    const sectionStyle: CSSProperties = getStyle(schema.selectorGroup || 'section');
+    const sectionStyle: CSSProperties = getStyle('section');
     
     return (
         <div className="section-preview">
             <section
                 style={sectionStyle}
                 data-name={schema.name || 'Untitled'}
-                className={`section ${schema.selectorGroup || 'section'}`}
+                className="section"
             >
                 {schema.children?.map((child: Schema) => (
                     <NodeRenderer key={child.id} node={child} getContent={getContent} />

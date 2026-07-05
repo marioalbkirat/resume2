@@ -71,14 +71,14 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                     <div id="name-error" style="font-size: 12px; color: #ef4444; margin-top: 4px;"></div>
                 </div>
                 <div id="tag-container" style="margin-bottom: 16px; display: ${selectedType === 'heading' ? 'block' : 'none'};">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">HTML Tag</label>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Title size</label>
                     <select id="swal-tag" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-sizing: border-box; font-size: 14px;">
-                        <option value="h1">h1</option>
-                        <option value="h2" selected>h2</option>
-                        <option value="h3">h3</option>
-                        <option value="h4">h4</option>
-                        <option value="h5">h5</option>
-                        <option value="h6">h6</option>
+                        <option value="h1">Main title</option>
+                        <option value="h2" selected>Subtitle</option>
+                        <option value="h3">Section title</option>
+                        <option value="h4">Minimal title</option>
+                        <option value="h5">Small title</option>
+                        <option value="h6">Caption title</option>
                     </select>
                 </div>
                 <div id="value-container" style="margin-bottom: 16px; display: ${!tagsWithoutValue.includes(typeOptions[selectedType]?.defaultTag || '') && selectedType !== 'image' && selectedType !== 'link' && selectedType !== 'icon' ? 'block' : 'none'};">

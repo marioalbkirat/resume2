@@ -40,7 +40,7 @@ const normalizeBorderStyle = (style: CSSProperties) => {
   return next as CSSProperties;
 };
 const selectorKeysFor = (node: Schema) => {
-  const keys = [node.tag, node.selectorGroup];
+  const keys = [node.tag];
   if (node.tag === "section") keys.push("section");
   if (node.tag === "i" || node.tag === "svg") keys.push("icon");
   if (node.tag === "img") keys.push("image");
@@ -115,7 +115,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
         onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")}
         style={{ ...nodeStyle, outline: "none" }}
       >
-        {nodeContent?.value || children}
+        {nodeContent?.value ?? ""}
       </a>
     );
   }

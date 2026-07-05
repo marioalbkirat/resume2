@@ -60,7 +60,7 @@
 //         if (!node) return null;
 //         const allowedTagChildren = this.allowedTagChildren(node.tag);
 //         if (allowedTagChildren.length < 1 || !allowedTagChildren.includes(tag)) return null;
-//         const child: Schema = { id: this.generateId(), tag, type: this.alias[tag], selectorGroup: tag, name, children: [] };
+//         const child: Schema = { id: this.generateId(), tag, type: this.alias[tag], name, children: [] };
 //         node.children.push(child);
 //         return section;
 //     }
@@ -142,14 +142,11 @@ export class SectionSchema {
     }
 
     allowedTagChildren(tag: string): string[] {
-        if (tag === "img" || tag === 'i') return [];
+        if (["img", "i", "span", "text", "a", "h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return [];
         if (tag === "ul") return ["li"];
-        if (tag === "li") return ["div", "ul", "img", 'i', "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
-        if (tag === "p") return ["span", "img", 'i', "a"];
-        if (tag === "span") return ["span", "img", 'i', "a"];
-        if (["h1", "h2", "h3", "h4", "h5", "h6"].includes(tag)) return ["span", "img", 'i', "a"];
-        if (tag === "a") return ["span", "img", 'i'];
-        return ["div", "ul", "img", 'i', "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
+        if (tag === "li") return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
+        if (tag === "p") return ["span", "img", "i", "a"];
+        return ["div", "ul", "img", "i", "p", "span", "h1", "h2", "h3", "h4", "h5", "h6", "a"];
     }
 
     addNode(section: Schema, tag: string, name: string, parentId: string, role: "default" | "sectionIcon" = "default"): { section: Schema; child: Schema } | null {
@@ -165,7 +162,6 @@ export class SectionSchema {
             tag,
             type: this.alias[tag] || tag,
             role: tag === "i" ? role : undefined,
-            selectorGroup: tag,
             name,
             children: [],
             parentId: parentId
@@ -189,6 +185,7 @@ export class SectionSchema {
             node.tag = tag;
             node.type = this.alias[tag] || tag;
             if (tag !== "i") node.role = undefined;
+            if (this.allowedTagChildren(tag).length === 0) node.children = [];
         }
         if (role !== undefined && node.tag === "i") node.role = role;
         if (name !== undefined) node.name = name;

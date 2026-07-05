@@ -36,9 +36,8 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
         id: crypto.randomUUID(), 
         tag: "section", 
         type: "section", 
-        name: sectionName, 
-        selectorGroup: "section", 
-        children: [] 
+        name: sectionName,
+        children: []
     });
     const [content, setContent] = useState<Record<string, Content>>(initialContent);
     
@@ -181,7 +180,6 @@ export function useSectionBuilder({ initialSchema, initialContent = {}, sectionN
                 tag: "section",
                 type: "section",
                 name: sectionName,
-                selectorGroup: "section",
                 children: []
             });
         }
