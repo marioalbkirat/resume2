@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
         const previewImage = formData.get("previewImage") as File | null;
 
         if (!draftId || !name || !description) return NextResponse.json({ error: "draftId, name and description are required" }, { status: 400 });
-        const draft = await prisma.resumeDraft.findFirst({ where: { id: draftId, userId: DEMO_USER_ID } });
+        let draft = await prisma.resumeDraft.findFirst({ where: { id: draftId, userId: DEMO_USER_ID } });
         if (!draft) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
 
-        let previewImagePath = "";
+        let previewImagePath = draft.previewImage ?? "";
         if (previewImage && previewImage.size > 0) {
             const uploadDir = path.join(process.cwd(), "public", "user-resumes");
             await mkdir(uploadDir, { recursive: true });
@@ -47,8 +47,9 @@ export async function POST(request: NextRequest) {
         });
         if (!template.previewImage) {
             try {
-                const capturedPreviewImage = await captureResumePreview(`${request.nextUrl.origin}/resume/preview/${draft.id}`, `template-${template.id}`);
-                template = await prisma.resumeTemplate.update({ where: { id: template.id }, data: { previewImage: capturedPreviewImage } });
+                const capturedPreviewImage = await captureResumePreview(`${request.nextUrl.origin}/resume/preview/${draft.id}`, `draft-${draft.id}`);
+                draft = await prisma.resumeDraft.update({ where: { id: draft.id }, data: { previewImage: capturedPreviewImage } });
+                template = await prisma.resumeTemplate.update({ where: { id: template.id }, data: { previewImage: draft.previewImage ?? capturedPreviewImage } });
             } catch (previewError) {
                 console.error("Failed to capture template preview:", previewError);
             }

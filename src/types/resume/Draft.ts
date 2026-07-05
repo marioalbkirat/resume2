@@ -19,6 +19,7 @@ export interface DraftDB {
     isDownloaded: boolean;
     isLinkedWithPortfolio: boolean;
     slug?: string;
+    previewImage?: string | null;
     createdAt: Date;
     updatedAt: Date;
     user: User;
