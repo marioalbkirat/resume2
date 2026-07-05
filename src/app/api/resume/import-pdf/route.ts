@@ -14,15 +14,40 @@ type Field = { id: string; label: string; tag: string; type: string; section: st
 
 const isContentNode = (node: Schema) => !["section", "div", "ul", "ol", "li"].includes(node.tag) && !["section", "container", "list", "listItem"].includes(node.type);
 
-const cleanPdfText = (value: string) => value.replace(/\\([()\\])/g, "$1").replace(/\\n/g, "\n").replace(/\\r/g, "\n").replace(/\\t/g, " ").replace(/\\\d{3}/g, " ");
+const decodePdfLiteral = (value: string) => value.replace(/\\([nrtbf()\\])/g, (_, code: string) => ({ n: "\n", r: "\n", t: " ", b: " ", f: " ", "(": "(", ")": ")", "\\": "\\" }[code] ?? code))
+    .replace(/\\([0-7]{1,3})/g, (_, octal: string) => String.fromCharCode(Number.parseInt(octal, 8)))
+    .replace(/\\(?:\r?\n|\r)/g, "");
 
-const extractLiteralStrings = (stream: string) => {
+const decodePdfHex = (value: string) => {
+    const normalized = value.replace(/\s+/g, "");
+    const evenHex = normalized.length % 2 === 0 ? normalized : `${normalized}0`;
+    const bytes = Buffer.from(evenHex, "hex");
+    if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+        const utf16le = Buffer.from(bytes.subarray(2));
+        for (let index = 0; index + 1 < utf16le.length; index += 2) [utf16le[index], utf16le[index + 1]] = [utf16le[index + 1], utf16le[index]];
+        return utf16le.toString("utf16le");
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) return bytes.subarray(2).toString("utf16le");
+    return bytes.toString("latin1");
+};
+
+const extractPdfStrings = (input: string) => {
     const values: string[] = [];
-    const literal = /\((?:\\.|[^\\()])*\)\s*Tj|\((?:\\.|[^\\()])*\)\s*'/g;
-    for (const match of stream.matchAll(literal)) values.push(cleanPdfText(match[0].replace(/\)\s*(Tj|')$/, "").slice(1)));
+    const tokens = /\((?:\\.|[^\\()])*\)|<([0-9a-fA-F\s]+)>/g;
+    for (const match of input.matchAll(tokens)) {
+        if (match[0].startsWith("(")) values.push(decodePdfLiteral(match[0].slice(1, -1)));
+        else if (match[1]) values.push(decodePdfHex(match[1]));
+    }
+    return values;
+};
+
+const extractTextOperators = (stream: string) => {
+    const values: string[] = [];
+    const singleText = /(\((?:\\.|[^\\()])*\)|<[0-9a-fA-F\s]+>)\s*(?:Tj|'|")/g;
+    for (const match of stream.matchAll(singleText)) values.push(...extractPdfStrings(match[1]));
     const arrays = /\[((?:.|\n)*?)\]\s*TJ/g;
     for (const match of stream.matchAll(arrays)) {
-        const parts = [...match[1].matchAll(/\((?:\\.|[^\\()])*\)/g)].map(part => cleanPdfText(part[0].slice(1, -1)));
+        const parts = extractPdfStrings(match[1]);
         if (parts.length) values.push(parts.join(""));
     }
     return values;
@@ -39,7 +64,7 @@ const extractPdfText = (buffer: Buffer) => {
         const candidates = objectPrefix.includes("/FlateDecode") ? [() => inflateSync(streamBuffer).toString("latin1"), () => match[1]] : [() => match[1]];
         for (const read of candidates) {
             try {
-                const text = extractLiteralStrings(read()).join(" ");
+                const text = extractTextOperators(read()).join(" ");
                 if (text.trim()) chunks.push(text);
                 break;
             } catch {
@@ -47,7 +72,7 @@ const extractPdfText = (buffer: Buffer) => {
             }
         }
     }
-    return chunks.join("\n").replace(/[\u0000-\u001f]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    return chunks.join("\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]+/g, " ").replace(/\s{2,}/g, " ").trim();
 };
 
 const collectFields = (schema: Record<string, Schema>, content: Record<string, Content> = {}) => {
@@ -64,7 +89,7 @@ const parseJson = (value: string) => JSON.parse(value.replace(/```json|```/g, ""
 
 const heuristicResumeScore = (text: string) => {
     const lower = text.toLowerCase();
-    const positives = ["experience", "education", "skills", "email", "phone", "linkedin", "summary", "work", "project", "certification", "resume", "cv"];
+    const positives = ["experience", "education", "skills", "email", "phone", "linkedin", "summary", "work", "project", "certification", "resume", "cv", "الخبرة", "التعليم", "المهارات", "البريد", "الهاتف", "الجوال", "ملخص", "العمل", "مشروع", "الشهادات", "السيرة"];
     const negatives = ["chapter", "isbn", "publisher", "table of contents", "novel", "copyright", "appendix"];
     return positives.filter(word => lower.includes(word)).length - negatives.filter(word => lower.includes(word)).length * 2;
 };
