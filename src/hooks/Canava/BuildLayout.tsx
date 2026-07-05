@@ -200,8 +200,10 @@ export default function BuildLayout({ sections, settings, distribution, content 
     return () => observer.disconnect();
   }, [content, dimensions.height, distribution, mode, pageCount, sections, settings, style]);
 
-  if (mode !== "preview") {
-    return <div id="resume" dir={settings.direction.toLowerCase()} style={{ ...pageSizeStyle, height: `${dimensions.height * Math.max(1, pageCount)}mm`, minHeight: `${dimensions.height * Math.max(1, pageCount)}mm`, overflow: "visible" }}>{renderPageContent()}</div>;
+  if (mode !== "preview" || exportMode) {
+    const exportPageCount = exportMode ? measuredPageCount : Math.max(1, pageCount);
+
+    return <div id="resume" dir={settings.direction.toLowerCase()} style={{ ...pageSizeStyle, height: `${dimensions.height * exportPageCount}mm`, minHeight: `${dimensions.height * exportPageCount}mm`, overflow: "visible" }}>{renderPageContent()}</div>;
   }
 
   const pages = Array.from({ length: measuredPageCount }, (_, index) => index);

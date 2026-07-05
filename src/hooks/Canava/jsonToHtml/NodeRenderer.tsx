@@ -57,6 +57,13 @@ const getNodeStyle = (node: Schema, style?: ResumeStyle) => normalizeBorderStyle
   ...selectorKeysFor(node).reduce((acc, key) => ({ ...acc, ...asCssProperties(style?.selectors?.[key]) }), {} as CSSProperties),
   ...asCssProperties(style?.elements?.[node.id]),
 });
+const normalizeHref = (href: string) => {
+  const trimmedHref = href.trim();
+  if (!trimmedHref || trimmedHref === "#") return "#";
+  if (/^(https?:|mailto:|tel:|#|\/)/i.test(trimmedHref)) return trimmedHref;
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(trimmedHref)) return `mailto:${trimmedHref}`;
+  return `https://${trimmedHref}`;
+};
 
 export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onDeleteListItem, onSelectNode, style }: NodeRendererProps) {
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
@@ -93,7 +100,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   }
 
   if (node.tag === "a") {
-    const href = nodeContent?.prop?.href || "#";
+    const href = normalizeHref(nodeContent?.prop?.href || "#");
     const isExternalLink = /^https?:\/\//i.test(href);
 
     return (
