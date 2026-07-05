@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { Content } from "@/types/resume/Content";
 import { Schema, SectionRole } from "@/types/resume/Section";
 import { SectionSchema } from "./SectionSchema";
@@ -17,12 +17,25 @@ export class SectionValidation {
   private fieldTitleSchema = z.string().trim().min(4).max(30);
   private descriptionSchema = z.string().trim().min(10).max(200);
 
+  private formatError(error: unknown, fallback: string): string {
+    if (error instanceof ZodError) return error.issues.map(issue => issue.message).join(" ") || fallback;
+    return error instanceof Error ? error.message : fallback;
+  }
+
   validateGenerateDescription(description: unknown): string {
-    return this.descriptionSchema.parse(description);
+    try {
+      return this.descriptionSchema.parse(description);
+    } catch (error) {
+      throw new Error(this.formatError(error, "Description must be 10 to 200 characters."));
+    }
   }
 
   validateContentValue(tag: string, value: unknown): string {
-    return this.getContentValueSchema(tag).parse(value ?? "");
+    try {
+      return this.getContentValueSchema(tag).parse(value ?? "");
+    } catch (error) {
+      throw new Error(this.formatError(error, `Invalid ${tag} content value.`));
+    }
   }
 
   safeValidateContentValue(tag: string, value: unknown, fallback = ""): string {
@@ -37,7 +50,11 @@ export class SectionValidation {
   }
 
   validateFieldTitle(title: unknown): string {
-    return this.fieldTitleSchema.parse(title);
+    try {
+      return this.fieldTitleSchema.parse(title);
+    } catch (error) {
+      throw new Error(this.formatError(error, "Field title must be 4 to 30 characters."));
+    }
   }
 
   safeValidateFieldTitle(title: unknown, fallback = "Field title"): string {
@@ -49,15 +66,20 @@ export class SectionValidation {
   }
 
   validateSectionForm(input: Partial<SectionForm>, options: { admin?: boolean } = {}): SectionForm {
-    const form = z.object({
-      name: this.sectionNameSchema,
-      target: z.enum(["RESUME", "PORTFOLIO"]),
-      visibility: z.enum(["OFFICIAL", "COMMUNITY", "PRIVATE"]),
-      schema: z.any(),
-      content: z.record(z.string(), z.any()).default({}),
-    }).parse(input);
-    if (form.visibility === "OFFICIAL" && !options.admin) throw new Error("Only admins can create official sections.");
-    return { ...form, schema: this.sanitizeSchema(form.schema), content: this.sanitizeContent(form.schema, form.content) };
+    try {
+      const form = z.object({
+        name: this.sectionNameSchema,
+        target: z.enum(["RESUME", "PORTFOLIO"]),
+        visibility: z.enum(["OFFICIAL", "COMMUNITY", "PRIVATE"]),
+        schema: z.any(),
+        content: z.record(z.string(), z.any()).default({}),
+      }).parse(input);
+      if (form.visibility === "OFFICIAL" && !options.admin) throw new Error("Only admins can create official sections.");
+      const schema = this.sanitizeSchema(form.schema);
+      return { ...form, schema, content: this.sanitizeContent(schema, form.content) };
+    } catch (error) {
+      throw new Error(this.formatError(error, "Section validation failed."));
+    }
   }
 
   private sanitizeSchema(input: Schema, parentId?: string): Schema {
@@ -75,13 +97,13 @@ export class SectionValidation {
         const item = content[node.id];
         if (item) {
           const prop = { ...(item.prop ?? {}) };
-          if (!["img", "i"].includes(node.tag) && prop.title) prop.title = this.safeValidateFieldTitle(prop.title);
+          if (!["img", "i"].includes(node.tag) && prop.title) prop.title = this.validateFieldTitle(prop.title);
           if (node.tag === "a") prop.href = prop.href || "https://example.com";
           if (node.tag === "img") {
             prop.src = prop.src || item.value || "/images/user-photo.avif";
             prop.alt = prop.alt || "Image";
           }
-          output[node.id] = { id: node.id, type: node.type, value: this.safeValidateContentValue(node.tag, item.value), prop };
+          output[node.id] = { id: node.id, type: node.type, value: this.validateContentValue(node.tag, item.value), prop };
         }
       }
       node.children.forEach(visit);

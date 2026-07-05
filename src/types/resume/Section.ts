@@ -27,4 +27,4 @@ export interface SectionDB {
     user: UserDB;
 }
 
-export type Section = Omit<SectionDB, 'user'>;
+export type Section = Omit<SectionDB, 'user'> & { user?: Pick<UserDB, 'email' | 'isAdmin'> };

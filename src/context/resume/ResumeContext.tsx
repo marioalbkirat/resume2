@@ -145,7 +145,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
 
     useEffect(() => {
         const fetchInitialData = async () => {
-            const [templatesResponse, sectionsResponse, draftsResponse] = await Promise.all([fetch("/api/admin/templates"), fetch("/api/admin/sections"), fetch("/api/resume/resume-draft")]);
+            const [templatesResponse, sectionsResponse, draftsResponse] = await Promise.all([fetch("/api/admin/templates"), fetch("/api/section"), fetch("/api/resume/resume-draft")]);
             const loadedSections = sectionsResponse.ok ? await sectionsResponse.json() as Section[] : [];
             setSections(loadedSections);
             if (draftsResponse.ok) setDrafts(await draftsResponse.json() as Draft[]);
