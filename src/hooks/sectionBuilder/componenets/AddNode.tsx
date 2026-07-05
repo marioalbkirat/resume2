@@ -3,8 +3,8 @@ import { Schema } from '@/types/resume/Section';
 import { FiPlus } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { createRoot, Root } from 'react-dom/client';
-import { ComponentType, useRef } from 'react';
-import { IconItem } from '@/hooks/PickIcons/icons';
+import { useRef, type ComponentType } from 'react';
+import type { IconItem } from '@/hooks/PickIcons/icons';
 import { useSectionBuilder } from '../useSectionBuilder';
 import { SectionValidation } from '@/classes/section/SectionValidation';
 const validation = new SectionValidation();
@@ -29,13 +29,9 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
     const IconSelectorRef = useRef<ComponentType<{ onSelect: (icon: IconItem) => void; selectedIcon?: IconItem | null; className?: string; }> | null>(null);
     const selectedIconValueRef = useRef<string>('FaUser');
     const loadIconSelector = async () => {
-        try {
-            const myModule = await import('@/hooks/PickIcons/icons/PickIcons');
-            IconSelectorRef.current = myModule.default;
-            return true;
-        } catch {
-            return false;
-        }
+        const myModule = await import('@/hooks/PickIcons/icons/PickIcons');
+        IconSelectorRef.current = myModule.default;
+        return true;
     };
     const showForm = async () => {
         const allowedTags = allowedTagChildren(node.tag);
