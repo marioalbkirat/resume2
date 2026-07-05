@@ -1,6 +1,6 @@
 "use client";
 
-import { ICON_MAP } from "@/hooks/PickIcons/icons";
+import IconPreview from "@/hooks/PickIcons/icons/IconPreview";
 import { Content } from "@/types/resume/Content";
 import { Schema } from "@/types/resume/Section";
 import Image from "next/image";
@@ -91,8 +91,11 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
 
   if (node.tag === "i") {
     const iconName = nodeContent?.value || "FaUser";
-    const Icon = ICON_MAP[iconName as keyof typeof ICON_MAP];
-    return <span {...common} className={`inline-flex align-middle ${common.className}`}>{Icon ? <Icon aria-hidden /> : null}</span>;
+    return (
+      <span {...common} className={`inline-flex align-middle ${common.className}`}>
+        <IconPreview name={iconName} aria-hidden />
+      </span>
+    );
   }
 
   if (node.tag === "img") {
