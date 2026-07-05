@@ -65,7 +65,7 @@ export default function TreeNode({ nodeId, level = 0, isRoot = false, builder }:
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                     <span className="text-xs text-gray-400 font-mono shrink-0">📄</span>
                     <span className="text-sm font-medium text-gray-800 truncate">
-                        {currentNode.name}
+                        {content?.prop?.title || currentNode.type}
                     </span>
                     {displayValue && (
                         <span className="text-xs text-gray-400 truncate ml-2">
@@ -80,7 +80,7 @@ export default function TreeNode({ nodeId, level = 0, isRoot = false, builder }:
                 )}
                 <div className={`flex items-center gap-1 shrink-0 transition-all duration-200`}>
                     <div className="flex items-center gap-0.5 bg-white rounded-lg shadow-sm border border-gray-200 px-1 py-0.5">
-                        <UpdateNode node={currentNode} builder={builder} />
+                        {!["link", "image", "list", "listItem", "container", "section"].includes(currentNode.type) && <UpdateNode node={currentNode} builder={builder} />}
                         {!isRoot && <DeleteNode node={currentNode} builder={builder} />}
                         {canHaveChildren && <AddNode node={currentNode} builder={builder} />}
                     </div>

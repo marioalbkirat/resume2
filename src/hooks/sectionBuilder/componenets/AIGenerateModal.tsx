@@ -1,7 +1,7 @@
 // D:\cvBuilder\resumebuilder\src\hooks\sectionBuilder\componenets\AIGenerateModal.tsx
 import { useState } from 'react';
 import Swal from 'sweetalert2';
-import { AISectionGenerator } from '@/classes/section/AISectionGenerator';
+import { useSectionServices } from '@/context/section/SectionServicesContext';
 import { Content } from '@/types/resume/Content';
 import { Schema } from '@/types/resume/Section';
 import { useSectionBuilder } from '../useSectionBuilder';
@@ -16,21 +16,21 @@ interface AIGenerateModalProps {
 export default function AIGenerateModal({ builder, onClose, sectionName, onGenerated }: AIGenerateModalProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [description, setDescription] = useState('');
-    const generator = new AISectionGenerator();
+    const { generateSection } = useSectionServices();
 
     const handleGenerate = async () => {
-        if (!description.trim()) {
+        if (description.trim().length < 10 || description.trim().length > 200) {
             Swal.fire({
                 icon: 'warning',
                 title: 'Please describe your section',
-                text: 'Enter a description of the section you want to create.',
+                text: 'Description must be between 10 and 200 characters.',
             });
             return;
         }
 
         setIsLoading(true);
         try {
-            const result = await generator.generateSection({
+            const result = await generateSection({
                 description: description.trim(),
                 sectionType: "resume",
                 sectionName,
@@ -42,7 +42,7 @@ export default function AIGenerateModal({ builder, onClose, sectionName, onGener
                 ? Object.fromEntries(result.content.map(item => [item.id, item]))
                 : result.content;
 
-            const generatedData = { schema: { ...result.schema, name: sectionName }, content: contentRecord };
+            const generatedData = { schema: result.schema, content: contentRecord };
             builder.resetBuilder(generatedData.schema, generatedData.content);
             onGenerated?.(generatedData);
             

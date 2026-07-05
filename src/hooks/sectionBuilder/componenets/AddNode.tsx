@@ -30,8 +30,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
             const myModule = await import('@/hooks/PickIcons/icons/PickIcons');
             IconSelectorRef.current = myModule.default;
             return true;
-        } catch (error) {
-            console.error('Failed to load IconSelector:', error);
+        } catch {
             return false;
         }
     };
@@ -45,7 +44,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
         const htmlContent = `
             <div style="text-align: left; direction: ltr;">
                 <div style="margin-bottom: 16px; padding: 10px; background: #eff6ff; border-radius: 8px; font-size: 14px; color: #1e40af;">
-                    💡 Adding to: <strong>${node.name}</strong> (${node.tag})
+                    💡 Adding to: <strong>${node.type}</strong> (${node.tag})
                 </div>
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Element Type</label>
@@ -66,7 +65,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Name <span style="color: #ef4444;">*</span></label>
                     <input type="text" id="swal-name" 
                         style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; box-sizing: border-box; font-size: 14px;"
-                        placeholder="e.g., my_element_name"
+                        placeholder="e.g., Company name"
                     />
                     <div id="name-error" style="font-size: 12px; color: #ef4444; margin-top: 4px;"></div>
                 </div>
@@ -93,8 +92,8 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                 <div id="icon-role-container" style="margin-bottom: 16px; display: ${selectedType === 'icon' ? 'block' : 'none'};">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Icon Role</label>
                     <select id="swal-icon-role" style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; background: white; box-sizing: border-box; font-size: 14px;">
-                        <option value="default">Default icon</option>
-                        <option value="sectionIcon">Section title icon</option>
+                        <option value="regularIcon">Regular content icon</option>
+                        <option value="sectionTitleIcon">Section title icon</option>
                     </select>
                 </div>
                 <div id="icon-selector-container" style="margin-bottom: 16px; display: ${selectedType === 'icon' ? 'block' : 'none'}; min-height: 200px;">
@@ -288,7 +287,7 @@ export default function AddNode({ node, builder }: { node: Schema; builder: Retu
                 if (selectedType === 'image') props = { src: '/images/user-photo.avif', alt: 'Image' };
                 if (selectedType === 'link') props = { href: 'https://example.com' };
 
-                const role = selectedType === 'icon' ? ((document.getElementById('swal-icon-role') as HTMLSelectElement)?.value as 'default' | 'sectionIcon') || 'default' : undefined;
+                const role = selectedType === 'icon' ? ((document.getElementById('swal-icon-role') as HTMLSelectElement)?.value as 'regularIcon' | 'sectionTitleIcon') || 'regularIcon' : undefined;
 
                 return { type: selectedType, name: finalName, value, tag, props, role };
             }

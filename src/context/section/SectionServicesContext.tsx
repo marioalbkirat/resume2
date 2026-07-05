@@ -7,8 +7,9 @@ type SectionServicesContextType = {
     getSections: () => Promise<Section[]>;
     createSection: (sectionForm: CreateSection) => Promise<Section>;
     deleteSection: (id: string) => Promise<void>;
-    getSectionById: (id: string) => Promise<Section>;
+    getSectionById: (id: string) => Promise<Section | null>;
     updateSection: (id: string, section: CreateSection) => Promise<Section>;
+    generateSection: (request: import("@/classes/section").GenerateSectionRequest) => Promise<import("@/classes/section/SectionServices").AIGenerateResponse>;
 };
 const SectionServicesContext = createContext<SectionServicesContextType | null>(null);
 type ProviderProps = { children: ReactNode; };
@@ -23,11 +24,14 @@ export function SectionServicesProvider({ children }: ProviderProps) {
     const deleteSection = async (id: string): Promise<void> => {
         return await services.deleteSection(id)
     };
-    const getSectionById = async (id: string): Promise<Section> => {
+    const getSectionById = async (id: string): Promise<Section | null> => {
         return await services.getSectionById(id)
     };
     const updateSection = async (id: string, sectionForm: CreateSection): Promise<Section> => {
         return await services.updateSection(id, sectionForm);
+    };
+    const generateSection = async (request: import("@/classes/section").GenerateSectionRequest) => {
+        return await services.generateSection(request);
     }
     return (
         <SectionServicesContext.Provider
@@ -36,7 +40,8 @@ export function SectionServicesProvider({ children }: ProviderProps) {
                 getSectionById,
                 getSections,
                 createSection,
-                deleteSection
+                deleteSection,
+                generateSection
             }}
         >
             {children}

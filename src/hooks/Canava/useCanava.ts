@@ -151,7 +151,7 @@ export function useCanava({
         if (!section) return;
 
         const schemaCopy = JSON.parse(JSON.stringify(section.schema));
-        const result = schemaControl.addNode(schemaCopy, tag, name, parentId);
+        const result = schemaControl.addNode(schemaCopy, tag, parentId);
         if (!result) return;
 
         const { section: newSchema, child } = result;
@@ -167,6 +167,7 @@ export function useCanava({
                 return contentControl.createContent(
                     prevContent,
                     child.id,
+                    tag,
                     type,
                     value || defaultContent.value,
                     props || defaultContent.props
@@ -206,7 +207,7 @@ export function useCanava({
         if (!section) return;
 
         const schemaCopy = JSON.parse(JSON.stringify(section.schema));
-        const result = schemaControl.updateNode(schemaCopy, nodeId, tag, name);
+        const result = schemaControl.updateNode(schemaCopy, nodeId, tag);
         if (!result) return;
 
         updateSectionInArray(sectionId, { schema: result });
@@ -223,7 +224,7 @@ export function useCanava({
             
             if (existing) {
                 if (value !== undefined) {
-                    updated = contentControl.updateContentValue(updated, nodeId, value);
+                    updated = contentControl.updateContentValue(updated, nodeId, existing.type === "heading" ? "h2" : existing.type === "paragraph" ? "p" : "span", value);
                 }
                 if (props) {
                     updated = contentControl.updateContentProps(updated, nodeId, props);
@@ -237,6 +238,7 @@ export function useCanava({
                         updated = contentControl.createContent(
                             updated,
                             nodeId,
+                            node.tag,
                             node.type,
                             value || defaultContent.value,
                             props || defaultContent.props

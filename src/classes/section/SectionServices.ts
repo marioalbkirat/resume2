@@ -1,63 +1,54 @@
 import { Section } from "@/types/resume/Section";
-import { CreateSection } from ".";
+import { CreateSection, GenerateSectionRequest } from ".";
+import { Content } from "@/types/resume/Content";
+import { Schema } from "@/types/resume/Section";
+import { SectionValidation } from "./SectionValidation";
 
-const fallbackSection = (): Section => ({
-  id: crypto.randomUUID(),
-  name: "Untitled",
-  target: "RESUME",
-  visibility: "PRIVATE",
-  authorId: "",
-  schema: { id: crypto.randomUUID(), tag: "section", type: "section", name: "Untitled", children: [] },
-  content: {},
-  createdAt: new Date(),
-  updatedAt: new Date(),
-});
+export type AIGenerateResponse = { schema: Schema; content: Record<string, Content> | Content[]; explanation?: string };
 
 export class SectionServices {
-    private static readonly ADMIN_API = "/api/admin/sections";
-    private static readonly USER_API = "/api/section";
+    private static readonly API = "/api/section";
+    private static readonly GENERATE_API = "/api/resume/generate-section";
+    private validation = new SectionValidation();
 
     async getSections(): Promise<Section[]> {
-        try {
-            const result = await fetch(SectionServices.ADMIN_API);
-            return result.ok ? await result.json() as Section[] : [];
-        } catch (error) {
-            console.error(error);
-            return [];
-        }
+        const result = await fetch(SectionServices.API);
+        return result.ok ? await result.json() as Section[] : [];
     }
-    async getSectionById(id: string): Promise<Section> {
-        try {
-            const result = await fetch(`${SectionServices.ADMIN_API}/${id}`);
-            return result.ok ? await result.json() as Section : fallbackSection();
-        } catch (error) {
-            console.error(error);
-            return fallbackSection();
-        }
+
+    async getSectionById(id: string): Promise<Section | null> {
+        const result = await fetch(`${SectionServices.API}/${id}`);
+        return result.ok ? await result.json() as Section | null : null;
     }
+
     async createSection(section: CreateSection): Promise<Section> {
-        const api = section.visibility === "OFFICIAL" ? SectionServices.ADMIN_API : SectionServices.USER_API;
-        const result = await fetch(api, { method: "POST", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(section) });
-        if (!result.ok) {
-            const errorData = await result.json().catch(() => ({}));
-            throw new Error(errorData.message || errorData.error || 'Failed to create section');
-        }
+        const data = this.validation.validateSectionForm(section, { admin: section.visibility === "OFFICIAL" });
+        const result = await fetch(SectionServices.API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        if (!result.ok) throw new Error(await this.readError(result, "Failed to create section"));
         return await result.json() as Section;
     }
+
     async updateSection(id: string, section: CreateSection): Promise<Section> {
-        const api = section.visibility === "OFFICIAL" ? SectionServices.ADMIN_API : SectionServices.USER_API;
-        const result = await fetch(`${api}/${id}`, { method: "PUT", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(section) });
-        if (!result.ok) {
-            const errorData = await result.json().catch(() => ({}));
-            throw new Error(errorData.message || errorData.error || 'Failed to update section');
-        }
+        const data = this.validation.validateSectionForm(section, { admin: section.visibility === "OFFICIAL" });
+        const result = await fetch(`${SectionServices.API}/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+        if (!result.ok) throw new Error(await this.readError(result, "Failed to update section"));
         return await result.json() as Section;
     }
-    async deleteSection(id: string) {
-        const result = await fetch(`${SectionServices.ADMIN_API}/${id}`, { method: "DELETE" });
-        if (!result.ok) {
-            const errorData = await result.json().catch(() => ({}));
-            throw new Error(errorData.message || errorData.error || 'Failed to delete section');
-        }
+
+    async deleteSection(id: string): Promise<void> {
+        const result = await fetch(`${SectionServices.API}/${id}`, { method: "DELETE" });
+        if (!result.ok) throw new Error(await this.readError(result, "Failed to delete section"));
+    }
+
+    async generateSection(request: GenerateSectionRequest): Promise<AIGenerateResponse> {
+        const description = this.validation.validateGenerateDescription(request.description);
+        const result = await fetch(SectionServices.GENERATE_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...request, description }) });
+        if (!result.ok) throw new Error(await this.readError(result, "AI generation failed"));
+        return await result.json() as AIGenerateResponse;
+    }
+
+    private async readError(response: Response, fallback: string): Promise<string> {
+        const errorData = await response.json().catch(() => ({}));
+        return errorData.message || errorData.error || fallback;
     }
 }
