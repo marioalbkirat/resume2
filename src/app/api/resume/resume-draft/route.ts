@@ -69,6 +69,7 @@ export async function PATCH(request: NextRequest) {
 
         const data = {
             title: body.title ?? existing.title,
+            templateId: body.templateId ?? existing.templateId,
             content: body.content ?? existing.content,
             schema: body.schema ?? existing.schema,
             settings: body.settings ?? existing.settings,
@@ -76,7 +77,13 @@ export async function PATCH(request: NextRequest) {
             style: body.style ?? existing.style,
         };
 
-        const draft = await prisma.resumeDraft.update({ where: { id }, data });
+        let draft = await prisma.resumeDraft.update({ where: { id }, data });
+        try {
+            const previewImage = await captureResumePreview(`${request.nextUrl.origin}/resume/preview/${draft.id}`, `draft-${draft.id}`);
+            draft = await prisma.resumeDraft.update({ where: { id }, data: { previewImage } });
+        } catch (previewError) {
+            console.error("Failed to capture draft preview:", previewError);
+        }
         return NextResponse.json(draft);
     } catch (error) {
         return NextResponse.json({ error: "Failed to update draft", details: error }, { status: 400 });
