@@ -92,6 +92,26 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     return <span {...common} className={`inline-block ${common.className}`}><Image src={nodeContent?.value || "/placeholder.png"} alt={node.name} width={100} height={100} /></span>;
   }
 
+  if (node.tag === "a") {
+    const href = nodeContent?.prop?.href || "#";
+    const isExternalLink = /^https?:\/\//i.test(href);
+
+    return (
+      <a
+        {...common}
+        href={isEditable ? undefined : href}
+        target={!isEditable && isExternalLink ? "_blank" : undefined}
+        rel={!isEditable && isExternalLink ? "noopener noreferrer" : undefined}
+        contentEditable={isEditable}
+        suppressContentEditableWarning
+        onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")}
+        style={{ ...nodeStyle, outline: "none" }}
+      >
+        {nodeContent?.value || children}
+      </a>
+    );
+  }
+
   if (node.tag === "li") {
     return (
       <li {...common} className={`relative pe-7 ${common.className}`}>
