@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Schema } from "@/types/resume/Section";
 import { Content } from "@/types/resume/Content";
 import { useSectionBuilder } from "./useSectionBuilder";
@@ -19,6 +19,10 @@ export default function SectionBuilderUI({ sectionName, schema, content, onExpor
     const [advancedMode, setAdvancedMode] = useState(Boolean(schema?.children?.length));
     const builder = useSectionBuilder({ initialSchema: schema ? { ...schema, name: sectionName } : undefined, initialContent: content, sectionName });
     const contentCount = Object.keys(builder.getAllContent()).length;
+
+    useEffect(() => {
+        onExport?.({ schema: { ...builder.schema, name: sectionName }, content: builder.content });
+    }, [builder.schema, builder.content, onExport, sectionName]);
 
     const exportCurrent = () => {
         const currentData = builder.exportData();
