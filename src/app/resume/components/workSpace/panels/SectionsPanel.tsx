@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { FiPlus, FiEye, FiEyeOff, FiCopy, FiFolder, FiMinus, FiX } from "react-icons/fi";
 import { IoMdMove } from "react-icons/io";
+import { toast } from "react-toastify";
 import CreateSection from "./CreateSection";
 import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import { Section } from "@/types/resume/Section";
@@ -22,8 +23,14 @@ export default function SectionsPanel() {
 
     const assertUnique = (name: string) => !sections.some(s => s.authorId === CURRENT_USER_ID && s.name.trim().toLowerCase() === name.trim().toLowerCase());
     const openCreate = () => {
-        if (!newSectionName.trim()) return alert("Please enter a section name");
-        if (!assertUnique(newSectionName)) return alert("You already have a section with this name.");
+        if (!newSectionName.trim()) {
+            toast.error("Please enter a section name");
+            return;
+        }
+        if (!assertUnique(newSectionName)) {
+            toast.error("You already have a section with this name.");
+            return;
+        }
         setDuplicateSource(null); setShowCreateSection(true);
     };
     const openDuplicate = (section: Section) => {
@@ -33,8 +40,14 @@ export default function SectionsPanel() {
     };
     const confirmDuplicate = () => {
         const name = duplicateName.trim();
-        if (!name) return alert("Please enter a section name");
-        if (!assertUnique(name)) return alert("You already have a section with this name.");
+        if (!name) {
+            toast.error("Please enter a section name");
+            return;
+        }
+        if (!assertUnique(name)) {
+            toast.error("You already have a section with this name.");
+            return;
+        }
         setDuplicateName(name);
         setShowDuplicateDialog(false);
         setShowCreateSection(true);
