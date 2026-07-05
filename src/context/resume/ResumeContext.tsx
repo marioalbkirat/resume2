@@ -2,6 +2,7 @@
 
 import { Distribution } from "@/types/resume/Distribution";
 import { ResumeTemplate } from "@/types/resume/ResumeTemplate";
+import { Draft } from "@/types/resume/Draft";
 import { ResumeStyle } from "@/types/resume/ResumeStyle";
 import { Schema, Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
@@ -14,6 +15,11 @@ type ResumeBuilderContextType = {
     setSelectedResume: Dispatch<SetStateAction<ResumeTemplate | null>>;
     selectedResume: ResumeTemplate | null;
     templates: ResumeTemplate[];
+    setTemplates: Dispatch<SetStateAction<ResumeTemplate[]>>;
+    drafts: Draft[];
+    activeDraft: Draft | null;
+    setDrafts: Dispatch<SetStateAction<Draft[]>>;
+    setActiveDraft: Dispatch<SetStateAction<Draft | null>>;
     sections: Section[];
     setSections: Dispatch<SetStateAction<Section[]>>;
     content: Record<string, Content>;
@@ -33,6 +39,7 @@ type ResumeBuilderContextType = {
     setSelectedNodeId: Dispatch<SetStateAction<string | null>>;
     toggleMode: () => void;
     activateTemplate: (template: ResumeTemplate) => void;
+    activateDraft: (draft: Draft) => void;
     addSectionToDistribution: (sectionId: string) => void;
     removeSectionFromDistribution: (sectionId: string) => void;
     updateDistributionItem: (sectionId: string, patch: Partial<Distribution[string]>) => void;
@@ -91,6 +98,8 @@ const mergeSectionContent = (sections: Section[], distribution: Distribution, cu
 export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [selectedResume, setSelectedResume] = useState<ResumeTemplate | null>(null);
     const [templates, setTemplates] = useState<ResumeTemplate[]>([]);
+    const [drafts, setDrafts] = useState<Draft[]>([]);
+    const [activeDraft, setActiveDraft] = useState<Draft | null>(null);
     const [sections, setSections] = useState<Section[]>([]);
     const [content, setContent] = useState<Record<string, Content>>({});
     const [distribution, setDistributionState] = useState<Distribution>({});
@@ -116,14 +125,28 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         setDistributionState(nextDistribution);
         setStyle((template.style as ResumeStyle) ?? defaultStyle);
         setContent(mergeSectionContent(sections, nextDistribution, templateContent(template)));
+        setActiveDraft(null);
         setSelectedNodeId(null);
     }, [sections]);
 
+
+    const activateDraft = useCallback((draft: Draft) => {
+        setActiveDraft(draft);
+        const sourceTemplate = templates.find(template => template.id === draft.templateId) ?? null;
+        setSelectedResume(sourceTemplate);
+        setSettingsState(templateSettings({ ...(sourceTemplate ?? {}), settings: draft.settings } as ResumeTemplate));
+        setDistributionState(normalizeDistribution(draft.distribution, draft.settings));
+        setStyle(draft.style);
+        setContent(draft.content);
+        setSelectedNodeId(null);
+    }, [templates]);
+
     useEffect(() => {
         const fetchInitialData = async () => {
-            const [templatesResponse, sectionsResponse] = await Promise.all([fetch("/api/admin/templates"), fetch("/api/admin/sections")]);
+            const [templatesResponse, sectionsResponse, draftsResponse] = await Promise.all([fetch("/api/admin/templates"), fetch("/api/admin/sections"), fetch("/api/resume/resume-draft")]);
             const loadedSections = sectionsResponse.ok ? await sectionsResponse.json() as Section[] : [];
             setSections(loadedSections);
+            if (draftsResponse.ok) setDrafts(await draftsResponse.json() as Draft[]);
             if (templatesResponse.ok) {
                 const data = await templatesResponse.json() as ResumeTemplate[];
                 setTemplates(data);
@@ -208,7 +231,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
 
     const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
 
-    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
+    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem }}>{children}</ResumeBuilderContext.Provider>;
 }
 
 export function useResumeBuilder() { const context = useContext(ResumeBuilderContext); if (!context) throw new Error("useResumeBuilder must be used inside ResumeBuilderProvider"); return context; }
