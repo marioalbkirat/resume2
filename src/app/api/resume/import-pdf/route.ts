@@ -87,6 +87,28 @@ const collectFields = (schema: Record<string, Schema>, content: Record<string, C
 
 const parseJson = (value: string) => JSON.parse(value.replace(/```json|```/g, "").trim());
 
+const getTextQuality = (text: string) => {
+    const letters = [...text.matchAll(/[\p{L}]/gu)].length;
+    const numbers = [...text.matchAll(/\p{N}/gu)].length;
+    const whitespace = [...text.matchAll(/\s/gu)].length;
+    const replacement = (text.match(/\uFFFD/g) ?? []).length;
+    const controls = (text.match(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g) ?? []).length;
+    const punctuation = [...text.matchAll(/[\p{P}]/gu)].length;
+    const readable = letters + numbers + whitespace + punctuation;
+    const total = Math.max(text.length, 1);
+    return {
+        readableRatio: readable / total,
+        letterRatio: letters / total,
+        replacementRatio: replacement / total,
+        controlRatio: controls / total,
+    };
+};
+
+const looksGarbled = (text: string) => {
+    const { readableRatio, letterRatio, replacementRatio, controlRatio } = getTextQuality(text);
+    return replacementRatio > 0.02 || controlRatio > 0.02 || readableRatio < 0.7 || letterRatio < 0.25;
+};
+
 const getResumeSignals = (text: string) => {
     const lower = text.toLowerCase();
     const positives = [
@@ -134,6 +156,7 @@ export async function POST(request: NextRequest) {
         if (buffer.subarray(0, 4).toString() !== "%PDF") return NextResponse.json({ error: "Invalid PDF file." }, { status: 400 });
         const extractedText = extractPdfText(buffer);
         if (extractedText.length < 80) return NextResponse.json({ error: "Could not extract enough readable resume text from this PDF." }, { status: 422 });
+        if (looksGarbled(extractedText)) return NextResponse.json({ error: "The PDF text contains garbled, non-readable characters and does not resemble a structured resume; therefore it cannot be parsed into a valid resume." }, { status: 422 });
         if (looksObviouslyUnrelated(extractedText)) return NextResponse.json({ error: "This PDF does not look like a resume/CV. Please upload a relevant resume or CV, not a book or unrelated file." }, { status: 422 });
         const fields = collectFields(body.schema ?? {}, body.content ?? {});
         if (!fields.length) return NextResponse.json({ error: "No editable resume fields are available to fill." }, { status: 400 });
