@@ -110,6 +110,30 @@ const extractTextOperators = (stream: string, fontMaps: Map<string, Map<string, 
     return values;
 };
 
+const collapseSpacedCharacters = (text: string) => text
+    .replace(/(?<!\S)([\p{L}\p{N}](?: [\p{L}\p{N}]){2,})(?!\S)/gu, match => match.replace(/ /g, ""))
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([([{])\s+/g, "$1")
+    .replace(/\s+([)\]}])/g, "$1");
+
+const repairShiftedLatinText = (text: string) => text.replace(/[\u00a0-\u00ff]/g, character => {
+    const shifted = character.charCodeAt(0) - 115;
+    return shifted >= 32 && shifted <= 126 ? String.fromCharCode(shifted) : character;
+});
+
+const scoreExtractedText = (text: string) => {
+    const asciiWords = text.match(/[A-Za-z]{3,}/g)?.length ?? 0;
+    const resumeScore = getResumeSignals(text).positiveScore * 8;
+    const highLatin = text.match(/[\u00c0-\u00ff]/g)?.length ?? 0;
+    return asciiWords + resumeScore - highLatin;
+};
+
+const normalizeExtractedPdfText = (text: string) => {
+    const normalized = collapseSpacedCharacters(text).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    const repaired = collapseSpacedCharacters(repairShiftedLatinText(text)).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    return scoreExtractedText(repaired) > scoreExtractedText(normalized) + 10 ? repaired : normalized;
+};
+
 const extractPdfText = (buffer: Buffer) => {
     const source = buffer.toString("latin1");
     const objects = new Map<string, string>();
@@ -158,7 +182,7 @@ const extractPdfText = (buffer: Buffer) => {
             }
         }
     }
-    return chunks.join("\n").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    return normalizeExtractedPdfText(chunks.join("\n"));
 };
 
 const collectFields = (schema: Record<string, Schema>, content: Record<string, Content> = {}) => {
