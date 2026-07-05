@@ -3,7 +3,7 @@ import { validateSectionForm } from "@/lib/section/validation";
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
-const CURRENT_USER_ID = "cmqtlhdub0000t9rselto3b16";
+const CURRENT_USER_ID = "cmqzvfuwr0001t9x8hf4jp9n6";
 
 export async function GET() {
     try {
