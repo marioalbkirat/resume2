@@ -113,8 +113,9 @@ model ResumeDraft {
   userId                String
   templateId            String
   title                 String
+  previewImage          String?
   content               Json
-  schema                Json
+  schema                Json           @default("{}")
   settings              Json
   distribution          Json
   style                 Json

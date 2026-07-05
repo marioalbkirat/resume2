@@ -3,7 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 
-const DEMO_USER_ID = "cmqtlhdub0000t9rselto3b16";
+const DEMO_USER_ID = "cmqzvcgn80000t9x89yni4fg9";
 
 export async function POST(request: NextRequest) {
     try {

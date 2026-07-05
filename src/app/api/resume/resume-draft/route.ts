@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
-const DEMO_USER_ID = "cmqtlhdub0000t9rselto3b16";
+const DEMO_USER_ID = "cmqzvcgn80000t9x89yni4fg9";
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "resume";
 
 export async function GET() {
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
         });
         return NextResponse.json(draft, { status: 201 });
     } catch (error) {
+        console.log("Error creating draft:", error);
         return NextResponse.json({ error: "Failed to save draft", details: error }, { status: 400 });
     }
 }
