@@ -5,6 +5,10 @@ import { FiEdit2 } from 'react-icons/fi';
 import Swal from 'sweetalert2';
 import { useSectionBuilder } from '../useSectionBuilder';
 import { SectionValidation } from '@/classes/section/SectionValidation';
+import { createRoot, Root } from 'react-dom/client';
+import { useRef, type ComponentType } from 'react';
+import type { IconItem } from '@/hooks/PickIcons/icons';
+import { getIconMetadata } from '@/hooks/PickIcons/icons';
 
 const validation = new SectionValidation();
 
@@ -19,8 +23,15 @@ export default function UpdateNode({
     
     const FIXED_NAME_TYPES = ['container', 'list', 'listItem', 'image', 'icon', 'link'];
     const USER_NAME_TYPES = ['heading', 'text', 'paragraph'];
+    const iconRootRef = useRef<Root | null>(null);
+    const IconSelectorRef = useRef<ComponentType<{ onSelect: (icon: IconItem) => void; selectedIcon?: IconItem | null; className?: string; }> | null>(null);
+    const selectedIconValueRef = useRef<string>('FaUser');
 
-
+    const loadIconSelector = async () => {
+        const myModule = await import('@/hooks/PickIcons/icons/PickIcons');
+        IconSelectorRef.current = myModule.default;
+        return true;
+    };
 
     const showForm = async () => {
         const tagsWithoutValue = getTagsWithoutValue();
@@ -78,6 +89,16 @@ export default function UpdateNode({
                         </select>
                     </div>
                 ` : ''}
+                ${currentType === 'icon' ? `
+                    <div id="icon-selector-container" style="margin-bottom: 16px; min-height: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Select Icon</label>
+                        <div id="loading-indicator" style="display: none; text-align: center; padding: 20px; color: #6b7280;">
+                            Loading icons...
+                        </div>
+                        <div id="icon-selector-root"></div>
+                    </div>
+                ` : ''}
+
 
                 ${showValue ? `
                     <div style="margin-bottom: 16px;">
@@ -104,7 +125,7 @@ export default function UpdateNode({
             confirmButtonText: '✓ Update',
             cancelButtonText: '✗ Cancel',
             showCloseButton: true,
-            didOpen: () => {
+            didOpen: async () => {
                 const nameInput = document.getElementById('swal-name') as HTMLInputElement;
                 const validateName = () => {
                     const title = nameInput?.value.trim();
@@ -123,6 +144,38 @@ export default function UpdateNode({
                 };
                 nameInput?.addEventListener('input', validateName);
 
+                if (currentType === 'icon') {
+                    selectedIconValueRef.current = content?.value || 'FaUser';
+                    const renderIconSelector = async () => {
+                        const container = document.getElementById('icon-selector-root');
+                        const loadingIndicator = document.getElementById('loading-indicator');
+                        if (!container) return;
+                        if (iconRootRef.current) {
+                            iconRootRef.current.unmount();
+                            iconRootRef.current = null;
+                        }
+                        if (loadingIndicator) loadingIndicator.style.display = 'block';
+                        const loaded = await loadIconSelector();
+                        if (loadingIndicator) loadingIndicator.style.display = 'none';
+                        if (loaded && IconSelectorRef.current) {
+                            iconRootRef.current = createRoot(container);
+                            iconRootRef.current.render(
+                                <IconSelectorRef.current
+                                    onSelect={(icon: IconItem) => {
+                                        selectedIconValueRef.current = icon.name;
+                                        const label = document.querySelector('#icon-selector-container label');
+                                        if (label) label.innerHTML = `Selected Icon: <strong style="color: #10b981;">${selectedIconValueRef.current}</strong>`;
+                                    }}
+                                    selectedIcon={getIconMetadata(selectedIconValueRef.current) ?? null}
+                                />
+                            );
+                        }
+                    };
+                    const label = document.querySelector('#icon-selector-container label');
+                    if (label) label.innerHTML = `Selected Icon: <strong style="color: #10b981;">${selectedIconValueRef.current}</strong>`;
+                    void renderIconSelector();
+                }
+
                 const confirmButton = document.querySelector('.swal2-confirm') as HTMLElement;
                 confirmButton?.addEventListener('click', (e) => {
                     if (USER_NAME_TYPES.includes(currentType)) {
@@ -132,7 +185,17 @@ export default function UpdateNode({
                             Swal.showValidationMessage('⚠️ Name is required!');
                         }
                     }
+                    if (currentType === 'icon' && !selectedIconValueRef.current) {
+                        e.preventDefault();
+                        Swal.showValidationMessage('⚠️ Please select an icon!');
+                    }
                 });
+            },
+            willClose: () => {
+                if (iconRootRef.current) {
+                    iconRootRef.current.unmount();
+                    iconRootRef.current = null;
+                }
             },
             preConfirm: () => {
                 let title = (document.getElementById('swal-name') as HTMLInputElement)?.value.trim();
@@ -151,12 +214,15 @@ export default function UpdateNode({
                     value = 'https://example.com|Link Text';
                 }
 
-                if (tagsWithoutValue.includes(tag) || currentType === 'icon') {
+                if (currentType === 'icon') {
+                    value = selectedIconValueRef.current;
+                } else if (tagsWithoutValue.includes(tag)) {
                     value = '';
                 }
 
                 try {
                     if (USER_NAME_TYPES.includes(currentType)) validation.validateFieldTitle(title);
+                    if (currentType === 'icon' && !value) throw new Error('Please select an icon.');
                     if (!tagsWithoutValue.includes(tag) && currentType !== 'image' && currentType !== 'link' && currentType !== 'icon') validation.validateContentValue(tag, value);
                 } catch (error) {
                     Swal.showValidationMessage(error instanceof Error ? error.message : 'Element validation failed.');
