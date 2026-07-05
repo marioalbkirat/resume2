@@ -24,7 +24,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     try {
         const page = await browser.newPage();
-        await page.goto(new URL(`/resume/${slug}`, request.url).toString(), { waitUntil: "networkidle0" });
+        const exportUrl = new URL(`/resume/${slug}`, request.url);
+        exportUrl.searchParams.set("export", "pdf");
+        await page.goto(exportUrl.toString(), { waitUntil: "networkidle0" });
         await page.emulateMediaType("print");
         const pdf = await page.pdf({
             format: "A4",

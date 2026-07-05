@@ -22,6 +22,7 @@ interface BuildLayoutProps {
   onListItemDelete?: (sectionId: string, listItemId: string) => void;
   style?: ResumeStyle;
   pageCount?: number;
+  exportMode?: boolean;
 }
 
 const findFirstListId = (section: Section): string | null => {
@@ -84,7 +85,7 @@ const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSiz
   };
 };
 
-export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style, pageCount = 1 }: BuildLayoutProps) {
+export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const measuredFlowRef = useRef<HTMLDivElement>(null);
   const [measuredPageCount, setMeasuredPageCount] = useState(pageCount);
@@ -102,11 +103,11 @@ export default function BuildLayout({ sections, settings, distribution, content 
       minHeight: `${dimensions.height}mm`,
       padding: settings.columns === "ONE" ? padding : undefined,
       margin: 0,
-      boxShadow: "0 0 3px rgba(0,0,0,0.2)",
+      boxShadow: exportMode ? "none" : "0 0 3px rgba(0,0,0,0.2)",
       backgroundColor: settings.columns === "ONE" ? String(safeStyle.backgroundColor ?? fallbackBackgroundColor ?? "white") : "white",
       overflow: "hidden",
     };
-  }, [dimensions.height, dimensions.width, settings.columns, style?.global]);
+  }, [dimensions.height, dimensions.width, exportMode, settings.columns, style?.global]);
 
   const columnStyle = useMemo(() => {
     const { leftWidth, rightWidth } = getColumnWidths(style?.global, settings.pageSize);
@@ -204,7 +205,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
   }
 
   const pages = Array.from({ length: measuredPageCount }, (_, index) => index);
-  const pageGap = "24px";
+  const pageGap = exportMode ? "0" : "24px";
 
   return (
     <div id="resume" dir={settings.direction.toLowerCase()} style={{ display: "grid", gap: pageGap }}>
