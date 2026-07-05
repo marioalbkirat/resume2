@@ -80,7 +80,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     dir: direction.toLowerCase(),
     "data-node-id": node.id,
     "data-section-id": sectionId,
-    onClick: (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); if (isEditable) onSelectNode?.(node.id); },
+    onClick: isEditable ? (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); onSelectNode?.(node.id); } : undefined,
     className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isEditable ? "cursor-pointer" : ""}`,
     style: nodeStyle,
   };
@@ -107,9 +107,10 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
       <a
         {...common}
         href={isEditable ? undefined : href}
+        data-pdf-link={!isEditable && href !== "#" ? href : undefined}
         target={!isEditable && isExternalLink ? "_blank" : undefined}
         rel={!isEditable && isExternalLink ? "noopener noreferrer" : undefined}
-        contentEditable={isEditable}
+        contentEditable={isEditable ? true : undefined}
         suppressContentEditableWarning
         onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")}
         style={{ ...nodeStyle, outline: "none" }}

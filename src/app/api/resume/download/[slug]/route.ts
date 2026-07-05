@@ -27,6 +27,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         const exportUrl = new URL(`/resume/${slug}`, request.url);
         exportUrl.searchParams.set("export", "pdf");
         await page.goto(exportUrl.toString(), { waitUntil: "networkidle0" });
+        await page.evaluate(() => {
+            document.querySelectorAll<HTMLAnchorElement>("a[href]").forEach((anchor) => {
+                const rawHref = anchor.getAttribute("href");
+                if (!rawHref || rawHref === "#") return;
+                anchor.href = new URL(rawHref, window.location.href).href;
+                anchor.removeAttribute("contenteditable");
+                anchor.style.pointerEvents = "auto";
+            });
+        });
         await page.emulateMediaType("print");
         const pdf = await page.pdf({
             format: "A4",
