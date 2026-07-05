@@ -22,7 +22,7 @@ interface UseSectionBuilderReturn {
     getContent: (nodeId: string) => Content | null;
     getParent: (id: string) => Schema | null;
     getAllContent: () => Record<string, Content>;
-    getAllContentArray: () => Content[]; // إضافة هذه الدالة للتوافق
+    getAllContentArray: () => Content[];
     allowedTagChildren: (tag: string) => string[];
     getAlias: () => Record<string, string>;
     getTagsWithoutValue: () => string[];
