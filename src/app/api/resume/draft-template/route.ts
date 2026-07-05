@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { captureResumePreview } from "@/lib/resume/screenshot";
 import { NextRequest, NextResponse } from "next/server";
 
 const DEMO_USER_ID = "cmqzvcgn80000t9x89yni4fg9";
@@ -22,14 +23,14 @@ export async function POST(request: NextRequest) {
 
         let previewImagePath = "";
         if (previewImage && previewImage.size > 0) {
-            const uploadDir = path.join(process.cwd(), "public", "resumes");
+            const uploadDir = path.join(process.cwd(), "public", "user-resumes");
             await mkdir(uploadDir, { recursive: true });
             const filename = `${Date.now()}-${previewImage.name}`;
             await writeFile(path.join(uploadDir, filename), Buffer.from(await previewImage.arrayBuffer()));
-            previewImagePath = `/resumes/${filename}`;
+            previewImagePath = `/user-resumes/${filename}`;
         }
 
-        const template = await prisma.resumeTemplate.create({
+        let template = await prisma.resumeTemplate.create({
             data: {
                 name,
                 description,
@@ -44,6 +45,14 @@ export async function POST(request: NextRequest) {
                 authorId: DEMO_USER_ID,
             },
         });
+        if (!template.previewImage) {
+            try {
+                const capturedPreviewImage = await captureResumePreview(`${request.nextUrl.origin}/resume/preview/${draft.id}`, `template-${template.id}`);
+                template = await prisma.resumeTemplate.update({ where: { id: template.id }, data: { previewImage: capturedPreviewImage } });
+            } catch (previewError) {
+                console.error("Failed to capture template preview:", previewError);
+            }
+        }
         return NextResponse.json(template, { status: 201 });
     } catch (error) {
         return NextResponse.json({ error: "Failed to create template from draft", details: error }, { status: 400 });
