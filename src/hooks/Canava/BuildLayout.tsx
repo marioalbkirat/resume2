@@ -20,6 +20,8 @@ interface BuildLayoutProps {
   onNodeUpdate?: (sectionId: string, nodeId: string, value: string, props?: Record<string, string>) => void;
   onListItemAdd?: (sectionId: string, listNodeId: string) => void;
   onListItemDelete?: (sectionId: string, listItemId: string) => void;
+  onListItemDuplicate?: (sectionId: string, listItemId: string) => void;
+  onListItemMove?: (sectionId: string, listItemId: string, direction: "up" | "down") => void;
   style?: ResumeStyle;
   pageCount?: number;
   exportMode?: boolean;
@@ -85,7 +87,7 @@ const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSiz
   };
 };
 
-export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
+export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, onListItemDuplicate, onListItemMove, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const measuredFlowRef = useRef<HTMLDivElement>(null);
   const [measuredPageCount, setMeasuredPageCount] = useState(pageCount);
@@ -151,7 +153,10 @@ export default function BuildLayout({ sections, settings, distribution, content 
           showSectionIcons={config?.showIcon ?? true}
           direction={settings.direction}
           onUpdate={(nodeId, value, props) => onNodeUpdate?.(section.id, nodeId, value, props)}
+          onAddListItem={(listNodeId) => onListItemAdd?.(section.id, listNodeId)}
           onDeleteListItem={(nodeId) => onListItemDelete?.(section.id, nodeId)}
+          onDuplicateListItem={(nodeId) => onListItemDuplicate?.(section.id, nodeId)}
+          onMoveListItem={(nodeId, direction) => onListItemMove?.(section.id, nodeId, direction)}
           onSelectNode={onNodeSelect}
           style={style}
         />
