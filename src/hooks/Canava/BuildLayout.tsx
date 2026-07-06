@@ -6,7 +6,6 @@ import { Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { ResumeStyle } from "@/types/resume/ResumeStyle";
-import { FiPlus } from "react-icons/fi";
 import NodeRenderer from "./jsonToHtml/NodeRenderer";
 
 interface BuildLayoutProps {
@@ -26,17 +25,6 @@ interface BuildLayoutProps {
   pageCount?: number;
   exportMode?: boolean;
 }
-
-const findFirstListId = (section: Section): string | null => {
-  const stack = [section.schema];
-  while (stack.length) {
-    const node = stack.shift();
-    if (!node) continue;
-    if (node.tag === "ul" || node.tag === "ol") return node.id;
-    stack.push(...(node.children ?? []));
-  }
-  return null;
-};
 
 const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
   const safeStyle = { ...globalStyle };
@@ -129,38 +117,26 @@ export default function BuildLayout({ sections, settings, distribution, content 
     .sort((a, b) => (distribution[a.id]?.order ?? 9999) - (distribution[b.id]?.order ?? 9999)), [sections, distribution]);
 
   const renderSection = (section: Section) => {
-    const listId = findFirstListId(section);
     const config = distribution[section.id];
     return (
-      <section key={section.id} className="resume-section group mb-5 break-inside-avoid" data-section-id={section.id}>
-        {isEditable && (
-          <div className="mb-2 flex items-center justify-between bg-transparent px-0 py-1 text-xs text-gray-600 print:hidden">
-            <span>{section.name}</span>
-            {listId && (
-              <button type="button" onClick={() => onListItemAdd?.(section.id, listId)} className="inline-flex cursor-pointer items-center justify-center rounded bg-green-600 p-1.5 text-white hover:bg-green-700" title={`Add ${section.name} item`} aria-label={`Add ${section.name} item`}>
-                <FiPlus />
-              </button>
-            )}
-          </div>
-        )}
-        <NodeRenderer
-          node={section.schema}
-          sectionId={section.id}
-          content={content}
-          isEditable={isEditable}
-          selectedNodeId={selectedNodeId}
-          showIcons={settings.showIcons}
-          showSectionIcons={config?.showIcon ?? true}
-          direction={settings.direction}
-          onUpdate={(nodeId, value, props) => onNodeUpdate?.(section.id, nodeId, value, props)}
-          onAddListItem={(listNodeId) => onListItemAdd?.(section.id, listNodeId)}
-          onDeleteListItem={(nodeId) => onListItemDelete?.(section.id, nodeId)}
-          onDuplicateListItem={(nodeId) => onListItemDuplicate?.(section.id, nodeId)}
-          onMoveListItem={(nodeId, direction) => onListItemMove?.(section.id, nodeId, direction)}
-          onSelectNode={onNodeSelect}
-          style={style}
-        />
-      </section>
+      <NodeRenderer
+        key={section.id}
+        node={section.schema}
+        sectionId={section.id}
+        content={content}
+        isEditable={isEditable}
+        selectedNodeId={selectedNodeId}
+        showIcons={settings.showIcons}
+        showSectionIcons={config?.showIcon ?? true}
+        direction={settings.direction}
+        onUpdate={(nodeId, value, props) => onNodeUpdate?.(section.id, nodeId, value, props)}
+        onAddListItem={(listNodeId) => onListItemAdd?.(section.id, listNodeId)}
+        onDeleteListItem={(nodeId) => onListItemDelete?.(section.id, nodeId)}
+        onDuplicateListItem={(nodeId) => onListItemDuplicate?.(section.id, nodeId)}
+        onMoveListItem={(nodeId, direction) => onListItemMove?.(section.id, nodeId, direction)}
+        onSelectNode={onNodeSelect}
+        style={style}
+      />
     );
   };
 

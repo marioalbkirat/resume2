@@ -145,9 +145,13 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     style: nodeStyle,
   };
 
-  const children = node.children?.map((child) => (
+  const renderChild = (child: Schema) => (
     <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} showSectionIcons={showSectionIcons} direction={direction} onUpdate={onUpdate} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} onSelectNode={onSelectNode} style={style} />
-  ));
+  );
+  const children = node.children?.flatMap((child) => {
+    if (node.tag === "section" && child.tag === "section") return child.children?.map(renderChild) ?? [];
+    return [renderChild(child)];
+  });
 
   if (node.tag === "i") {
     const iconName = nodeContent?.value || "FaUser";
@@ -196,7 +200,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
             : undefined}
         className={`group/repeatable relative pe-8 ${common.className}`}
       >
-        <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent?.value ?? ""}</span>
+        {nodeContent?.value && <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent.value}</span>}
         {children}
         {isEditable && <RepeatableItemActions nodeId={node.id} parentId={node.parentId} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} onSelectNode={onSelectNode} isMenuOpen={isRepeatableMenuOpen} setIsMenuOpen={setIsRepeatableMenuOpen} />}
       </li>
@@ -204,9 +208,11 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   }
 
   if (hasText) {
+    if (!nodeContent?.value) return null;
+
     return (
       <Tag {...common} contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} style={{ ...nodeStyle, outline: "none" }}>
-        {nodeContent?.value ?? ""}
+        {nodeContent.value}
       </Tag>
     );
   }
