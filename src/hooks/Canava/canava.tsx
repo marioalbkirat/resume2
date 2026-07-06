@@ -34,18 +34,20 @@ export default function Canava() {
   }, [content, distribution, sections, setPageCount, settings.pageSize, style]);
 
   useEffect(() => {
-    if (!selectedNodeId) return;
+    const canvas = canvasRef.current;
+    if (!canvas || !selectedNodeId) return;
 
-    const clearSelectionOnOutsideClick = (event: PointerEvent) => {
+    const clearSelectionOnCanvasBlankClick = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
+      if (!canvas.contains(target)) return;
       if (target.closest("[data-node-id]")) return;
 
       setSelectedNodeId(null);
     };
 
-    document.addEventListener("pointerdown", clearSelectionOnOutsideClick);
-    return () => document.removeEventListener("pointerdown", clearSelectionOnOutsideClick);
+    canvas.addEventListener("pointerdown", clearSelectionOnCanvasBlankClick);
+    return () => canvas.removeEventListener("pointerdown", clearSelectionOnCanvasBlankClick);
   }, [selectedNodeId, setSelectedNodeId]);
 
   return (
