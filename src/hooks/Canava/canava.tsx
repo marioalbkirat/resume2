@@ -33,6 +33,21 @@ export default function Canava() {
     return () => resizeObserver.disconnect();
   }, [content, distribution, sections, setPageCount, settings.pageSize, style]);
 
+  useEffect(() => {
+    if (!selectedNodeId) return;
+
+    const clearSelectionOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-node-id]")) return;
+
+      setSelectedNodeId(null);
+    };
+
+    document.addEventListener("pointerdown", clearSelectionOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", clearSelectionOnOutsideClick);
+  }, [selectedNodeId, setSelectedNodeId]);
+
   return (
     <div ref={canvasRef}>
       {style.customCSS && <style>{style.customCSS}</style>}
