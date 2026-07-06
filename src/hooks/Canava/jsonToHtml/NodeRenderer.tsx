@@ -141,7 +141,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     "data-node-id": node.id,
     "data-section-id": sectionId,
     onClick: isEditable ? (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); onSelectNode?.(node.id); } : undefined,
-    className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} ${isEditable ? "cursor-pointer" : ""}`,
+    className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1 rounded-sm bg-blue-50/20 shadow-[0_0_0_4px_rgba(59,130,246,0.08)]" : ""} ${isEditable ? "cursor-pointer transition-all duration-200 ease-out hover:ring-1 hover:ring-blue-200 hover:ring-offset-1" : ""}`,
     style: nodeStyle,
   };
 
