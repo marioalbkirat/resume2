@@ -159,7 +159,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   }
 
   if (node.tag === "img") {
-    return <span {...common} className={`inline-block ${common.className}`}><Image src={nodeContent?.value || "/placeholder.png"} alt={nodeContent?.prop?.alt || "Image"} width={100} height={100} /></span>;
+    return <Image {...common} className={`inline-block ${common.className}`} src={nodeContent?.value || "/placeholder.png"} alt={nodeContent?.prop?.alt || "Image"} width={100} height={100} />
   }
 
   if (node.tag === "a") {
@@ -187,7 +187,13 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     return (
       <li
         {...common}
-        onContextMenu={isEditable ? (event: React.MouseEvent<HTMLElement>) => { event.preventDefault(); event.stopPropagation(); setIsRepeatableMenuOpen(true); onSelectNode?.(node.id); } : undefined}
+        onContextMenu={
+          isEditable ? (event: React.MouseEvent<HTMLElement>) => {
+            event.preventDefault(); event.stopPropagation();
+            setIsRepeatableMenuOpen(true);
+            onSelectNode?.(node.id);
+          }
+            : undefined}
         className={`group/repeatable relative pe-8 ${common.className}`}
       >
         <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent?.value ?? ""}</span>
