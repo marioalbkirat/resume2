@@ -48,8 +48,6 @@ type ResumeBuilderContextType = {
     deleteListItem: (sectionId: string, listItemId: string) => void;
     duplicateListItem: (sectionId: string, listItemId: string) => void;
     moveListItem: (sectionId: string, listItemId: string, direction: "up" | "down") => void;
-    addChildNode: (sectionId: string, parentId: string) => void;
-    duplicateSection: (sectionId: string) => void;
     deleteDraft: (draftId: string) => Promise<void>;
     deletePrivateTemplate: (templateId: string) => Promise<void>;
 };
@@ -66,11 +64,6 @@ const templateContent = (template: ResumeTemplate) => ({ ...(template.content ??
 
 const contentKeyFor = (node: Schema) => node.id;
 const makeNodeId = () => `node-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-const defaultChildFor = (parent: Schema): Schema => {
-    const tag = parent.tag === "ul" ? "li" : "span";
-    const id = makeNodeId();
-    return { id, tag, type: tag === "li" ? "listItem" : "text", children: [], parentId: parent.id };
-};
 
 const cloneListItem = (node: Schema, parentId: string | undefined, content: Record<string, Content>) => {
     const nextContent: Record<string, Content> = {};
@@ -290,44 +283,6 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         if (didMove) setSections(nextSections);
     }, [sections]);
 
-    const addChildNode = useCallback((sectionId: string, parentId: string) => {
-        let added: Schema | undefined;
-        const nextSections = sections.map(section => {
-            if (section.id !== sectionId) return section;
-            const appendChild = (node: Schema): Schema => {
-                if (node.id === parentId) {
-                    const child = defaultChildFor(node);
-                    added = child;
-                    return { ...node, children: [...(node.children ?? []), child] };
-                }
-                return { ...node, children: (node.children ?? []).map(appendChild) };
-            };
-            return { ...section, schema: appendChild(section.schema) };
-        });
-        if (!added) return;
-        setSections(nextSections);
-        const child = added as Schema;
-        if (child.tag !== "li") setContent(prev => ({ ...prev, [child.id]: { id: child.id, type: child.type, value: "New text" } }));
-    }, [sections]);
-
-    const duplicateSection = useCallback((sectionId: string) => {
-        const source = sections.find(section => section.id === sectionId);
-        if (!source) return;
-        const idMap = new Map<string, string>();
-        const cloneNode = (node: Schema, parentId?: string): Schema => {
-            const nextId = makeNodeId();
-            idMap.set(node.id, nextId);
-            return { ...node, id: nextId, parentId, children: (node.children ?? []).map(child => cloneNode(child, nextId)) };
-        };
-        const clonedSection: Section = { ...source, id: makeNodeId(), name: `${source.name} Copy`, schema: cloneNode(source.schema) };
-        setSections(prev => [...prev, clonedSection]);
-        setDistributionState(prev => ({ ...prev, [clonedSection.id]: { ...(prev[source.id] ?? { position: settings.columns === "TWO" ? "left" : "FULL", visible: true, showIcon: true }), order: Object.keys(prev).length, visible: true } }));
-        setContent(prev => {
-            const next = { ...prev };
-            idMap.forEach((nextId, oldId) => { if (prev[oldId]) next[nextId] = { ...prev[oldId], id: nextId }; });
-            return next;
-        });
-    }, [sections, settings.columns]);
 
     const deleteDraft = useCallback(async (draftId: string) => {
         const response = await fetch("/api/resume/resume-draft", {
@@ -353,7 +308,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
 
     const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
 
-    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem, duplicateListItem, moveListItem, addChildNode, duplicateSection, deleteDraft, deletePrivateTemplate }}>{children}</ResumeBuilderContext.Provider>;
+    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem, duplicateListItem, moveListItem, deleteDraft, deletePrivateTemplate }}>{children}</ResumeBuilderContext.Provider>;
 }
 
 export function useResumeBuilder() { const context = useContext(ResumeBuilderContext); if (!context) throw new Error("useResumeBuilder must be used inside ResumeBuilderProvider"); return context; }

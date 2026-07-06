@@ -6,6 +6,7 @@ import { Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import { ResumeStyle } from "@/types/resume/ResumeStyle";
+import { FiPlus } from "react-icons/fi";
 import NodeRenderer from "./jsonToHtml/NodeRenderer";
 
 interface BuildLayoutProps {
@@ -21,15 +22,21 @@ interface BuildLayoutProps {
   onListItemDelete?: (sectionId: string, listItemId: string) => void;
   onListItemDuplicate?: (sectionId: string, listItemId: string) => void;
   onListItemMove?: (sectionId: string, listItemId: string, direction: "up" | "down") => void;
-  onAddChildNode?: (sectionId: string, parentId: string) => void;
-  onSectionHide?: (sectionId: string) => void;
-  onSectionDuplicate?: (sectionId: string) => void;
-  onSectionIconToggle?: (sectionId: string) => void;
   style?: ResumeStyle;
   pageCount?: number;
   exportMode?: boolean;
 }
 
+const findFirstListId = (section: Section): string | null => {
+  const stack = [section.schema];
+  while (stack.length) {
+    const node = stack.shift();
+    if (!node) continue;
+    if (node.tag === "ul" || node.tag === "ol") return node.id;
+    stack.push(...(node.children ?? []));
+  }
+  return null;
+};
 
 const getPageGlobalStyle = (globalStyle: ResumeStyle["global"] = {}) => {
   const safeStyle = { ...globalStyle };
@@ -80,7 +87,7 @@ const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSiz
   };
 };
 
-export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, onListItemDuplicate, onListItemMove, onAddChildNode, onSectionHide, onSectionDuplicate, onSectionIconToggle, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
+export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, onListItemDuplicate, onListItemMove, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const measuredFlowRef = useRef<HTMLDivElement>(null);
   const [measuredPageCount, setMeasuredPageCount] = useState(pageCount);
@@ -122,9 +129,20 @@ export default function BuildLayout({ sections, settings, distribution, content 
     .sort((a, b) => (distribution[a.id]?.order ?? 9999) - (distribution[b.id]?.order ?? 9999)), [sections, distribution]);
 
   const renderSection = (section: Section) => {
+    const listId = findFirstListId(section);
     const config = distribution[section.id];
     return (
       <section key={section.id} className="resume-section group mb-5 break-inside-avoid" data-section-id={section.id}>
+        {isEditable && (
+          <div className="mb-2 flex items-center justify-between bg-transparent px-0 py-1 text-xs text-gray-600 print:hidden">
+            <span>{section.name}</span>
+            {listId && (
+              <button type="button" onClick={() => onListItemAdd?.(section.id, listId)} className="inline-flex cursor-pointer items-center justify-center rounded bg-green-600 p-1.5 text-white hover:bg-green-700" title={`Add ${section.name} item`} aria-label={`Add ${section.name} item`}>
+                <FiPlus />
+              </button>
+            )}
+          </div>
+        )}
         <NodeRenderer
           node={section.schema}
           sectionId={section.id}
@@ -140,8 +158,6 @@ export default function BuildLayout({ sections, settings, distribution, content 
           onDuplicateListItem={(nodeId) => onListItemDuplicate?.(section.id, nodeId)}
           onMoveListItem={(nodeId, direction) => onListItemMove?.(section.id, nodeId, direction)}
           onSelectNode={onNodeSelect}
-          onAddChildNode={(parentId) => onAddChildNode?.(section.id, parentId)}
-          sectionActions={{ onHide: () => onSectionHide?.(section.id), onDuplicate: () => onSectionDuplicate?.(section.id), onToggleIcon: () => onSectionIconToggle?.(section.id) }}
           style={style}
         />
       </section>
