@@ -4,7 +4,7 @@ import IconPreview from "@/hooks/PickIcons/icons/IconPreview";
 import { Content } from "@/types/resume/Content";
 import { Schema } from "@/types/resume/Section";
 import Image from "next/image";
-import { CSSProperties, ElementType, useEffect, useRef, useState } from "react";
+import { CSSProperties, Dispatch, ElementType, SetStateAction, useEffect, useRef, useState } from "react";
 import { ResumeStyle, StyleObject } from "@/types/resume/ResumeStyle";
 import { FiChevronDown, FiChevronUp, FiCopy, FiMoreVertical, FiPlus, FiTrash2 } from "react-icons/fi";
 
@@ -24,6 +24,8 @@ type NodeRendererProps = {
   onMoveListItem?: (nodeId: string, direction: "up" | "down") => void;
   onSelectNode?: (nodeId: string) => void;
   style?: ResumeStyle;
+  hoveredNodeId?: string | null;
+  setHoveredNodeId?: Dispatch<SetStateAction<string | null>>;
 };
 
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
@@ -123,8 +125,11 @@ const normalizeHref = (href: string) => {
   return `https://${trimmedHref}`;
 };
 
-export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, onSelectNode, style }: NodeRendererProps) {
+export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, onSelectNode, style, hoveredNodeId: controlledHoveredNodeId, setHoveredNodeId: controlledSetHoveredNodeId }: NodeRendererProps) {
   const [isRepeatableMenuOpen, setIsRepeatableMenuOpen] = useState(false);
+  const [internalHoveredNodeId, setInternalHoveredNodeId] = useState<string | null>(null);
+  const hoveredNodeId = controlledHoveredNodeId ?? internalHoveredNodeId;
+  const setHoveredNodeId = controlledSetHoveredNodeId ?? setInternalHoveredNodeId;
 
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
   if ((node.tag === "i" || node.tag === "svg") && (node.role === "sectionIcon" || node.role === "sectionTitleIcon") && !showSectionIcons) return null;
@@ -133,6 +138,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   const nodeContent = content[key];
   const hasText = !TEXTLESS_TAGS.has(node.tag);
   const isSelected = selectedNodeId === node.id;
+  const isHovered = hoveredNodeId === node.id;
   const Tag = node.tag as ElementType;
   const nodeStyle = getNodeStyle(node, style);
 
@@ -141,12 +147,14 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     "data-node-id": node.id,
     "data-section-id": sectionId,
     onClick: isEditable ? (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); onSelectNode?.(node.id); } : undefined,
-    className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1 rounded-sm bg-blue-50/20 shadow-[0_0_0_4px_rgba(59,130,246,0.08)]" : ""} ${isEditable ? "cursor-pointer transition-all duration-200 ease-out hover:ring-1 hover:ring-blue-200 hover:ring-offset-1" : ""}`,
+    onMouseOver: isEditable ? (event: React.MouseEvent<HTMLElement>) => { event.stopPropagation(); setHoveredNodeId(node.id); } : undefined,
+    onMouseLeave: isEditable ? () => setHoveredNodeId((current) => current === node.id ? null : current) : undefined,
+    className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1 rounded-sm bg-blue-50/20 shadow-[0_0_0_4px_rgba(59,130,246,0.08)]" : ""} ${isHovered && !isSelected ? "ring-1 ring-blue-200 ring-offset-1 rounded-sm" : ""} ${isEditable ? "cursor-pointer transition-all duration-200 ease-out" : ""}`,
     style: nodeStyle,
   };
 
   const renderChild = (child: Schema) => (
-    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} showSectionIcons={showSectionIcons} direction={direction} onUpdate={onUpdate} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} onSelectNode={onSelectNode} style={style} />
+    <NodeRenderer key={child.id} node={child} sectionId={sectionId} content={content} isEditable={isEditable} selectedNodeId={selectedNodeId} showIcons={showIcons} showSectionIcons={showSectionIcons} direction={direction} onUpdate={onUpdate} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} onSelectNode={onSelectNode} style={style} hoveredNodeId={hoveredNodeId} setHoveredNodeId={setHoveredNodeId} />
   );
   const children = node.children?.flatMap((child) => {
     if (node.tag === "section" && child.tag === "section") return child.children?.map(renderChild) ?? [];
