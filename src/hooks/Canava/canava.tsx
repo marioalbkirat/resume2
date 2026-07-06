@@ -5,7 +5,7 @@ import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import BuildLayout from "./BuildLayout";
 
 export default function Canava() {
-  const { sections, settings, distribution, content, style, mode, selectedNodeId, setSelectedNodeId, updateContent, addListItem, deleteListItem, pageCount, setPageCount } = useResumeBuilder();
+  const { sections, settings, distribution, content, style, mode, selectedNodeId, setSelectedNodeId, updateContent, addListItem, deleteListItem, duplicateListItem, moveListItem, pageCount, setPageCount } = useResumeBuilder();
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export default function Canava() {
   return (
     <div ref={canvasRef}>
       {style.customCSS && <style>{style.customCSS}</style>}
-      <BuildLayout sections={sections} settings={settings} distribution={distribution} content={content} mode={mode} selectedNodeId={selectedNodeId} onNodeSelect={setSelectedNodeId} onNodeUpdate={updateContent} onListItemAdd={addListItem} onListItemDelete={deleteListItem} style={style} pageCount={pageCount} />
+      <BuildLayout sections={sections} settings={settings} distribution={distribution} content={content} mode={mode} selectedNodeId={selectedNodeId} onNodeSelect={setSelectedNodeId} onNodeUpdate={updateContent} onListItemAdd={addListItem} onListItemDelete={deleteListItem} onListItemDuplicate={duplicateListItem} onListItemMove={moveListItem} style={style} pageCount={pageCount} />
     </div>
   );
 }
