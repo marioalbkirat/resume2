@@ -64,7 +64,7 @@ function NumberStepper({ label, value, fallback, min, max, unit = "px", onChange
 const withPercent = (value: string | number) => `${value}%`;
 
 type SpacingField = { label: string; key: string };
-type BorderSideField = { label: string; borderKey: string; widthKey: string; styleKey: string; colorKey: string };
+type BorderSideField = { label: string; widthKey: string; styleKey: string; colorKey: string };
 
 const spacingFields: SpacingField[] = [
   { label: "Top", key: "Top" },
@@ -74,10 +74,10 @@ const spacingFields: SpacingField[] = [
 ];
 
 const borderSideFields: BorderSideField[] = [
-  { label: "Top", borderKey: "borderTop", widthKey: "borderTopWidth", styleKey: "borderTopStyle", colorKey: "borderTopColor" },
-  { label: "Right", borderKey: "borderRight", widthKey: "borderRightWidth", styleKey: "borderRightStyle", colorKey: "borderRightColor" },
-  { label: "Bottom", borderKey: "borderBottom", widthKey: "borderBottomWidth", styleKey: "borderBottomStyle", colorKey: "borderBottomColor" },
-  { label: "Left", borderKey: "borderLeft", widthKey: "borderLeftWidth", styleKey: "borderLeftStyle", colorKey: "borderLeftColor" },
+  { label: "Top", widthKey: "borderTopWidth", styleKey: "borderTopStyle", colorKey: "borderTopColor" },
+  { label: "Right", widthKey: "borderRightWidth", styleKey: "borderRightStyle", colorKey: "borderRightColor" },
+  { label: "Bottom", widthKey: "borderBottomWidth", styleKey: "borderBottomStyle", colorKey: "borderBottomColor" },
+  { label: "Left", widthKey: "borderLeftWidth", styleKey: "borderLeftStyle", colorKey: "borderLeftColor" },
 ];
 
 const radiusFields: SpacingField[] = [
@@ -148,14 +148,13 @@ function SelectControl({ label, value, options, onChange, className = "w-32" }: 
 }
 
 function BorderSideControls({ field, current, patch }: { field: BorderSideField; current: StyleObject; patch: (next: StyleObject) => void }) {
-  const width = numberValue(current[field.widthKey] ?? current[field.borderKey], 0);
+  const width = numberValue(current[field.widthKey], 0);
   const style = String(current[field.styleKey] ?? (width > 0 ? "solid" : "none"));
   const color = String(current[field.colorKey] ?? "#111827");
   const updateBorder = (nextWidth = width, nextStyle = style, nextColor = color) => patch({
     [field.widthKey]: withPx(nextWidth),
     [field.styleKey]: nextStyle,
-    [field.colorKey]: nextColor,
-    [field.borderKey]: nextStyle === "none" || nextWidth === 0 ? "0 solid transparent" : `${nextWidth}px ${nextStyle} ${nextColor}`,
+    [field.colorKey]: nextStyle === "none" || nextWidth === 0 ? "transparent" : nextColor,
   });
 
   return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
@@ -359,7 +358,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
           {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={imageRadiusValue(field.key)} fallback={numberValue(current.borderRadius, 0)} min={0} max={100} unit="%" onChange={(value) => updateImageRadius(field.key, value)} />)}
         </DropdownPanel>
         <DropdownPanel label="Border">
-          {borderSideFields.map((field) => <BorderSideControls key={field.borderKey} field={field} current={current} patch={patch} />)}
+          {borderSideFields.map((field) => <BorderSideControls key={field.widthKey} field={field} current={current} patch={patch} />)}
         </DropdownPanel>
         <select value={String(current.objectFit ?? "")} onChange={(event) => patch({ objectFit: event.target.value })} className={`${inputClass} w-28`} aria-label="Object fit" title="Object fit">
           <option value="">Fit</option><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Fill</option><option value="scale-down">Scale down</option><option value="none">None</option>
@@ -385,7 +384,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
             {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={boxRadiusValue(field.key)} fallback={numberValue(current.borderRadius, 0)} min={0} max={120} onChange={(value) => updateBoxRadius(field.key, value)} />)}
           </DropdownPanel>
           <DropdownPanel label="Border">
-            {borderSideFields.map((field) => <BorderSideControls key={field.borderKey} field={field} current={current} patch={patch} />)}
+            {borderSideFields.map((field) => <BorderSideControls key={field.widthKey} field={field} current={current} patch={patch} />)}
           </DropdownPanel>
         </>}
       </>}
