@@ -97,6 +97,42 @@ const borderStyles = [
   { label: "Double", value: "double" },
 ];
 
+const displayOptions = [
+  { label: "Flex", value: "flex" },
+  { label: "Block", value: "block" },
+];
+
+const flexDirectionOptions = [
+  { label: "Row", value: "row" },
+  { label: "Column", value: "column" },
+];
+
+const justifyContentOptions = [
+  { label: "Start", value: "flex-start" },
+  { label: "Center", value: "center" },
+  { label: "End", value: "flex-end" },
+  { label: "Between", value: "space-between" },
+  { label: "Around", value: "space-around" },
+  { label: "Evenly", value: "space-evenly" },
+];
+
+const alignItemsOptions = [
+  { label: "Start", value: "flex-start" },
+  { label: "Center", value: "center" },
+  { label: "End", value: "flex-end" },
+  { label: "Stretch", value: "stretch" },
+  { label: "Baseline", value: "baseline" },
+];
+
+const alignContentOptions = [
+  { label: "Start", value: "flex-start" },
+  { label: "Center", value: "center" },
+  { label: "End", value: "flex-end" },
+  { label: "Stretch", value: "stretch" },
+  { label: "Between", value: "space-between" },
+  { label: "Around", value: "space-around" },
+];
+
 function DropdownPanel({ label, children }: { label: string; children: React.ReactNode }) {
   return <details className="group relative" onPointerDown={(event) => event.stopPropagation()}>
     <summary className={`${buttonClass} cursor-pointer list-none gap-2 [&::-webkit-details-marker]:hidden`}>
@@ -107,6 +143,13 @@ function DropdownPanel({ label, children }: { label: string; children: React.Rea
       <div className="grid gap-2">{children}</div>
     </div>
   </details>;
+}
+
+function SelectControl({ label, value, options, onChange, className = "w-32" }: { label: string; value?: string | number; options: { label: string; value: string }[]; onChange: (value: string) => void; className?: string }) {
+  return <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)} className={`${inputClass} ${className}`} aria-label={label} title={label}>
+    <option value="">{label}</option>
+    {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+  </select>;
 }
 
 function BorderSideControls({ field, current, patch }: { field: BorderSideField; current: StyleObject; patch: (next: StyleObject) => void }) {
@@ -217,11 +260,27 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
 
   const isTextLike = ["heading", "paragraph", "text", "link", "icon", "list", "listItem"].includes(selectedGroup);
   const isImage = selectedGroup === "image";
+  const isSection = selectedGroup === "section";
   const isLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
   const patch = (next: StyleObject) => updateElement(next);
   const imageRadiusValue = (key: string) => current[`border${key}Radius`] ?? current.borderRadius;
+  const boxRadiusValue = (key: string) => current[`border${key}Radius`] ?? current.borderRadius;
   const updateImageRadius = (key: string, value: number) => {
     const nextRadius = withPercent(value);
+
+    if (!key) {
+      patch({
+        borderRadius: nextRadius,
+        ...Object.fromEntries(radiusCornerKeys.map((cornerKey) => [cornerKey, nextRadius])),
+      });
+      return;
+    }
+
+    patch({ [`border${key}Radius`]: nextRadius });
+  };
+
+  const updateBoxRadius = (key: string, value: number) => {
+    const nextRadius = withPx(value);
 
     if (!key) {
       patch({
@@ -313,13 +372,32 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       {isLayout && <>
+        {isSection && <SelectControl label="Display" value={current.display} options={displayOptions} onChange={(value) => patch({ display: value })} className="w-28" />}
         <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "row" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "row" })} title="Row layout">Row</button>
         <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "column" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "column" })} title="Column layout">Column</button>
-        <NumberStepper label="Gap" value={current.gap} fallback={12} min={0} max={48} onChange={(value) => patch({ gap: withPx(value) })} />
+        {isSection && <SelectControl label="Direction" value={current.flexDirection} options={flexDirectionOptions} onChange={(value) => patch({ display: "flex", flexDirection: value })} />}
+        <NumberStepper label="Gap" value={current.gap} fallback={12} min={0} max={120} onChange={(value) => patch({ gap: withPx(value) })} />
+        {isSection && <>
+          <SelectControl label="Justify" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
+          <SelectControl label="Align items" value={current.alignItems} options={alignItemsOptions} onChange={(value) => patch({ display: "flex", alignItems: value })} />
+          <SelectControl label="Align content" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", alignContent: value })} />
+          <DropdownPanel label="Margin">
+            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Padding">
+            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Padding ${field.label}`} value={current[`padding${field.key}`]} fallback={numberValue(current.padding, 0)} min={0} max={120} onChange={(value) => patch({ [`padding${field.key}`]: withPx(value) })} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Border radius">
+            {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={boxRadiusValue(field.key)} fallback={numberValue(current.borderRadius, 0)} min={0} max={120} onChange={(value) => updateBoxRadius(field.key, value)} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Border">
+            {borderSideFields.map((field) => <BorderSideControls key={field.borderKey} field={field} current={current} patch={patch} />)}
+          </DropdownPanel>
+        </>}
       </>}
 
       <ColorInput label="Bg" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />
-      {!isImage && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
+      {!isImage && !isSection && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
     </div>
   </div>;
 
