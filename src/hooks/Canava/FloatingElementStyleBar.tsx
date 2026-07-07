@@ -440,7 +440,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
           <SelectControl label="Main placement" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
           <SelectControl label="Cross placement" value={current.alignItems} options={alignItemsOptions} onChange={(value) => patch({ display: "flex", alignItems: value })} />
           <SelectControl label="Wrapping" value={current.flexWrap} options={flexWrapOptions} onChange={(value) => patch({ display: "flex", flexWrap: value })} />
-          <SelectControl label="Wrapped lines" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", flexWrap: current.flexWrap ?? "wrap", alignContent: value, placeContent: "" })} />
+          <SelectControl label="Wrapped lines" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", flexWrap: current.flexWrap ?? "wrap", alignContent: value })} />
           <DropdownPanel label="Margin">
             {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
           </DropdownPanel>

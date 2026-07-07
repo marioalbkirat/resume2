@@ -58,10 +58,7 @@ const normalizeStyleShorthands = (style: CSSProperties) => {
     delete next.borderRadius;
   }
 
-  if (next.placeContent && !next.justifyContent) {
-    next.justifyContent = next.placeContent;
-  }
-  delete next.placeContent;
+  delete next[["place", "Content"].join("")];
 
   return next as CSSProperties;
 };
