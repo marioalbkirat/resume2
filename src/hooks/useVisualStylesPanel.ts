@@ -42,14 +42,37 @@ export const numberValue = (value: string | number | undefined, fallback: number
 export const withPx = (value: string | number) => `${value}px`;
 
 export function getVisualGroup(node?: Pick<Schema, "tag" | "type"> | null): VisualGroup {
-  const text = `${node?.tag ?? ""} ${node?.type ?? ""}`.toLowerCase();
+  const tag = String(node?.tag ?? "").toLowerCase();
+  const type = String(node?.type ?? "").toLowerCase();
+  const exactTagGroups: Partial<Record<string, VisualGroup>> = {
+    section: "section",
+    div: "container",
+    li: "listItem",
+    ul: "list",
+    ol: "list",
+    img: "image",
+    i: "icon",
+    p: "paragraph",
+    span: "text",
+    h1: "heading",
+    h2: "heading",
+    h3: "heading",
+    h4: "heading",
+    h5: "heading",
+    h6: "heading",
+    a: "link",
+  };
+
+  if (exactTagGroups[tag]) return exactTagGroups[tag];
+
+  const text = `${tag} ${type}`.toLowerCase();
   if (/img|image|photo|avatar|logo/.test(text)) return "image";
   if (/icon|svg|\bi\b/.test(text)) return "icon";
   if (/li|listitem/.test(text)) return "listItem";
   if (/ul|ol|list/.test(text)) return "list";
   if (/section/.test(text)) return "section";
   if (/container|div|wrapper|row|column|article|header|footer/.test(text)) return "container";
-  if (/a|link|url/.test(text)) return "link";
+  if (/\ba\b|link|url/.test(text)) return "link";
   if (/span|text/.test(text)) return "text";
   if (/p|paragraph|summary|description/.test(text)) return "paragraph";
   return "heading";
