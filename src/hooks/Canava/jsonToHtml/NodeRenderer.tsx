@@ -33,19 +33,26 @@ type NodeRendererProps = {
 const TEXTLESS_TAGS = new Set(["section", "div", "ul", "ol"]);
 const contentKeyFor = (node: Schema) => node.id;
 const asCssProperties = (style?: StyleObject) => (style ?? {}) as CSSProperties;
-const borderLonghandPattern = /^border(Top|Right|Bottom|Left)(Width|Style|Color)?$/;
+const borderSideProperties = ["Top", "Right", "Bottom", "Left"] as const;
 const borderAxisPattern = /^border(Width|Style|Color)$/;
 const borderRadiusLonghandPattern = /^border(TopLeft|TopRight|BottomRight|BottomLeft)Radius$/;
 const normalizeStyleShorthands = (style: CSSProperties) => {
   const next = { ...style } as CSSProperties & Record<string, unknown>;
   const styleKeys = Object.keys(next);
+  const hasBorderLonghand = styleKeys.some((key) => borderAxisPattern.test(key) || borderSideProperties.some((side) => key.startsWith(`border${side}`)));
 
-  if (styleKeys.some((key) => borderLonghandPattern.test(key))) {
+  if (hasBorderLonghand) {
     delete next.border;
     styleKeys.forEach((key) => {
       if (borderAxisPattern.test(key)) delete next[key];
     });
   }
+
+  borderSideProperties.forEach((side) => {
+    const sideKey = `border${side}`;
+    const hasSideLonghand = [`${sideKey}Width`, `${sideKey}Style`, `${sideKey}Color`].some((key) => key in next);
+    if (hasSideLonghand) delete next[sideKey];
+  });
 
   if (styleKeys.some((key) => borderRadiusLonghandPattern.test(key))) {
     delete next.borderRadius;
