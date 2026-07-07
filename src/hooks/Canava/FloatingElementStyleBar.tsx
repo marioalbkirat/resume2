@@ -98,39 +98,34 @@ const borderStyles = [
 ];
 
 const displayOptions = [
-  { label: "Flex", value: "flex" },
-  { label: "Block", value: "block" },
-];
-
-const flexDirectionOptions = [
-  { label: "Row", value: "row" },
-  { label: "Column", value: "column" },
+  { label: "Arrange items", value: "flex" },
+  { label: "Normal box", value: "block" },
 ];
 
 const justifyContentOptions = [
-  { label: "Start", value: "flex-start" },
-  { label: "Center", value: "center" },
-  { label: "End", value: "flex-end" },
-  { label: "Between", value: "space-between" },
-  { label: "Around", value: "space-around" },
-  { label: "Evenly", value: "space-evenly" },
+  { label: "At the start", value: "flex-start" },
+  { label: "In the middle", value: "center" },
+  { label: "At the end", value: "flex-end" },
+  { label: "Space between", value: "space-between" },
+  { label: "Space around", value: "space-around" },
+  { label: "Even spacing", value: "space-evenly" },
 ];
 
 const alignItemsOptions = [
-  { label: "Start", value: "flex-start" },
-  { label: "Center", value: "center" },
-  { label: "End", value: "flex-end" },
-  { label: "Stretch", value: "stretch" },
-  { label: "Baseline", value: "baseline" },
+  { label: "At the start", value: "flex-start" },
+  { label: "In the middle", value: "center" },
+  { label: "At the end", value: "flex-end" },
+  { label: "Fill the space", value: "stretch" },
+  { label: "Line up text", value: "baseline" },
 ];
 
 const alignContentOptions = [
-  { label: "Start", value: "flex-start" },
-  { label: "Center", value: "center" },
-  { label: "End", value: "flex-end" },
-  { label: "Stretch", value: "stretch" },
-  { label: "Between", value: "space-between" },
-  { label: "Around", value: "space-around" },
+  { label: "At the start", value: "flex-start" },
+  { label: "In the middle", value: "center" },
+  { label: "At the end", value: "flex-end" },
+  { label: "Fill the space", value: "stretch" },
+  { label: "Space between", value: "space-between" },
+  { label: "Space around", value: "space-around" },
 ];
 
 function DropdownPanel({ label, children }: { label: string; children: React.ReactNode }) {
@@ -260,7 +255,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
 
   const isTextLike = ["heading", "paragraph", "text", "link", "icon", "list", "listItem"].includes(selectedGroup);
   const isImage = selectedGroup === "image";
-  const isSection = selectedGroup === "section";
+  const isBoxLayout = selectedGroup === "section" || selectedGroup === "container";
   const isLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
   const patch = (next: StyleObject) => updateElement(next);
   const imageRadiusValue = (key: string) => current[`border${key}Radius`] ?? current.borderRadius;
@@ -372,15 +367,14 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       {isLayout && <>
-        {isSection && <SelectControl label="Display" value={current.display} options={displayOptions} onChange={(value) => patch({ display: value })} className="w-28" />}
-        <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "row" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "row" })} title="Row layout">Row</button>
-        <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "column" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "column" })} title="Column layout">Column</button>
-        {isSection && <SelectControl label="Direction" value={current.flexDirection} options={flexDirectionOptions} onChange={(value) => patch({ display: "flex", flexDirection: value })} />}
-        <NumberStepper label="Gap" value={current.gap} fallback={12} min={0} max={120} onChange={(value) => patch({ gap: withPx(value) })} />
-        {isSection && <>
-          <SelectControl label="Justify" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
-          <SelectControl label="Align items" value={current.alignItems} options={alignItemsOptions} onChange={(value) => patch({ display: "flex", alignItems: value })} />
-          <SelectControl label="Align content" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", alignContent: value })} />
+        {isBoxLayout && <SelectControl label="Box style" value={current.display} options={displayOptions} onChange={(value) => patch({ display: value })} className="w-32" />}
+        <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "row" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "row" })} title="Place items side by side">Side by side</button>
+        <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "column" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "column" })} title="Place items from top to bottom">Stacked</button>
+        <NumberStepper label="Space between items" value={current.gap} fallback={12} min={0} max={120} onChange={(value) => patch({ gap: withPx(value) })} />
+        {isBoxLayout && <>
+          <SelectControl label="Main placement" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
+          <SelectControl label="Cross placement" value={current.alignItems} options={alignItemsOptions} onChange={(value) => patch({ display: "flex", alignItems: value })} />
+          <SelectControl label="Wrapped lines" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", alignContent: value })} />
           <DropdownPanel label="Margin">
             {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
           </DropdownPanel>
@@ -397,7 +391,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       <ColorInput label="Bg" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />
-      {!isImage && !isSection && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
+      {!isImage && !isBoxLayout && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
     </div>
   </div>;
 
