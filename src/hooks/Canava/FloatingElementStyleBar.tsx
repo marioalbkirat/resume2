@@ -2,7 +2,7 @@
 
 import React, { RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiAlignCenter, FiAlignLeft, FiAlignRight, FiBold, FiItalic, FiMinus, FiPlus } from "react-icons/fi";
+import { FiAlignCenter, FiAlignLeft, FiAlignRight, FiBold, FiChevronDown, FiItalic, FiMinus, FiPlus } from "react-icons/fi";
 import { fonts, numberValue, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
 import { StyleObject } from "@/types/resume/ResumeStyle";
 
@@ -31,22 +31,75 @@ function NumberStepper({ label, value, fallback, min, max, unit = "px", onChange
   </div>;
 }
 
-function TextInput({ label, value, placeholder, onChange }: { label: string; value?: string | number; placeholder?: string; onChange: (value: string) => void }) {
-  return <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-black text-slate-500" title={label}>
-    {label}
-    <input
-      type="text"
-      value={String(value ?? "")}
-      placeholder={placeholder}
-      onChange={(event) => onChange(event.target.value)}
-      className={`${inputClass} w-32`}
-      aria-label={label}
-      title={label}
-    />
-  </label>;
+const withPercent = (value: string | number) => `${value}%`;
+
+type SpacingField = { label: string; key: string };
+type BorderSideField = { label: string; borderKey: string; widthKey: string; styleKey: string; colorKey: string };
+
+const spacingFields: SpacingField[] = [
+  { label: "Top", key: "Top" },
+  { label: "Right", key: "Right" },
+  { label: "Bottom", key: "Bottom" },
+  { label: "Left", key: "Left" },
+];
+
+const borderSideFields: BorderSideField[] = [
+  { label: "Top", borderKey: "borderTop", widthKey: "borderTopWidth", styleKey: "borderTopStyle", colorKey: "borderTopColor" },
+  { label: "Right", borderKey: "borderRight", widthKey: "borderRightWidth", styleKey: "borderRightStyle", colorKey: "borderRightColor" },
+  { label: "Bottom", borderKey: "borderBottom", widthKey: "borderBottomWidth", styleKey: "borderBottomStyle", colorKey: "borderBottomColor" },
+  { label: "Left", borderKey: "borderLeft", widthKey: "borderLeftWidth", styleKey: "borderLeftStyle", colorKey: "borderLeftColor" },
+];
+
+const radiusFields: SpacingField[] = [
+  { label: "All corners", key: "" },
+  { label: "Top left", key: "TopLeft" },
+  { label: "Top right", key: "TopRight" },
+  { label: "Bottom right", key: "BottomRight" },
+  { label: "Bottom left", key: "BottomLeft" },
+];
+
+const borderStyles = [
+  { label: "No line", value: "none" },
+  { label: "Solid", value: "solid" },
+  { label: "Dashed", value: "dashed" },
+  { label: "Dotted", value: "dotted" },
+  { label: "Double", value: "double" },
+];
+
+function DropdownPanel({ label, children }: { label: string; children: React.ReactNode }) {
+  return <details className="group relative" onPointerDown={(event) => event.stopPropagation()}>
+    <summary className={`${buttonClass} cursor-pointer list-none gap-2 [&::-webkit-details-marker]:hidden`}>
+      {label}
+      <FiChevronDown className="transition group-open:rotate-180" />
+    </summary>
+    <div className="absolute left-0 top-11 z-10 w-80 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl shadow-slate-900/15">
+      <div className="grid gap-2">{children}</div>
+    </div>
+  </details>;
 }
 
-const withPercent = (value: string | number) => `${value}%`;
+function BorderSideControls({ field, current, patch }: { field: BorderSideField; current: StyleObject; patch: (next: StyleObject) => void }) {
+  const width = numberValue(current[field.widthKey] ?? current[field.borderKey], 0);
+  const style = String(current[field.styleKey] ?? (width > 0 ? "solid" : "none"));
+  const color = String(current[field.colorKey] ?? "#111827");
+  const updateBorder = (nextWidth = width, nextStyle = style, nextColor = color) => patch({
+    [field.widthKey]: withPx(nextWidth),
+    [field.styleKey]: nextStyle,
+    [field.colorKey]: nextColor,
+    [field.borderKey]: nextStyle === "none" || nextWidth === 0 ? "0 solid transparent" : `${nextWidth}px ${nextStyle} ${nextColor}`,
+  });
+
+  return <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+    <div className="mb-2 text-xs font-black text-slate-600">{field.label}</div>
+    <div className="flex flex-wrap items-center gap-2">
+      <NumberStepper label={`${field.label} border width`} value={width} fallback={0} min={0} max={24} onChange={(value) => updateBorder(value)} />
+      <select value={style} onChange={(event) => updateBorder(width, event.target.value)} className={`${inputClass} w-28`} aria-label={`${field.label} border style`} title={`${field.label} border style`}>
+        {borderStyles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+      </select>
+      <ColorInput label="Color" value={color} onChange={(value) => updateBorder(width, style === "none" ? "solid" : style, value)} />
+    </div>
+  </div>;
+}
 
 function ColorInput({ label, value, onChange }: { label: string; value?: string | number; onChange: (value: string) => void }) {
   const current = String(value ?? "#111827");
@@ -161,7 +214,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
     onClick={(event) => event.stopPropagation()}
     title="Drag style bar"
   >
-    <div className="flex max-w-full flex-wrap items-center gap-2 overflow-x-hidden px-1">
+    <div className="flex max-w-full flex-wrap items-center gap-2 overflow-visible px-1">
       <button
         type="button"
         className="inline-flex h-9 cursor-grab touch-none items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-xs font-black text-slate-500 active:cursor-grabbing"
@@ -195,19 +248,23 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       {isImage && <>
-        <NumberStepper label="Margin" value={current.margin} fallback={0} min={0} max={120} onChange={(value) => patch({ margin: withPx(value) })} />
-        <NumberStepper label="Padding" value={current.padding} fallback={0} min={0} max={120} onChange={(value) => patch({ padding: withPx(value) })} />
+        <DropdownPanel label="Margin">
+          {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
+        </DropdownPanel>
+        <DropdownPanel label="Padding">
+          {spacingFields.map((field) => <NumberStepper key={field.key} label={`Padding ${field.label}`} value={current[`padding${field.key}`]} fallback={numberValue(current.padding, 0)} min={0} max={120} onChange={(value) => patch({ [`padding${field.key}`]: withPx(value) })} />)}
+        </DropdownPanel>
         <NumberStepper label="Image width" value={current.width} fallback={96} min={24} max={720} onChange={(value) => patch({ width: withPx(value) })} />
         <NumberStepper label="Image height" value={current.height} fallback={96} min={24} max={720} onChange={(value) => patch({ height: withPx(value) })} />
-        <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderRadius: withPercent(value) })} />
-        <NumberStepper label="Top left radius" value={current.borderTopLeftRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderTopLeftRadius: withPercent(value) })} />
-        <NumberStepper label="Top right radius" value={current.borderTopRightRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderTopRightRadius: withPercent(value) })} />
-        <NumberStepper label="Bottom right radius" value={current.borderBottomRightRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderBottomRightRadius: withPercent(value) })} />
-        <NumberStepper label="Bottom left radius" value={current.borderBottomLeftRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderBottomLeftRadius: withPercent(value) })} />
+        <DropdownPanel label="Border radius">
+          {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={current[`border${field.key}Radius`]} fallback={numberValue(current.borderRadius, 0)} min={0} max={100} unit="%" onChange={(value) => patch({ [`border${field.key}Radius`]: withPercent(value) })} />)}
+        </DropdownPanel>
+        <DropdownPanel label="Border">
+          {borderSideFields.map((field) => <BorderSideControls key={field.borderKey} field={field} current={current} patch={patch} />)}
+        </DropdownPanel>
         <select value={String(current.objectFit ?? "")} onChange={(event) => patch({ objectFit: event.target.value })} className={`${inputClass} w-28`} aria-label="Object fit" title="Object fit">
           <option value="">Fit</option><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Fill</option><option value="scale-down">Scale down</option><option value="none">None</option>
         </select>
-        <TextInput label="Border" value={current.border} placeholder="1px solid #000" onChange={(value) => patch({ border: value })} />
       </>}
 
       {isLayout && <>
