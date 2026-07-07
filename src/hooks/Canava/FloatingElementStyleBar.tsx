@@ -22,11 +22,41 @@ function compactFontName(value?: string | number) {
 
 function NumberStepper({ label, value, fallback, min, max, unit = "px", onChange }: { label: string; value?: string | number; fallback: number; min: number; max: number; unit?: string; onChange: (value: number) => void }) {
   const current = numberValue(value, fallback);
+  const [draftValue, setDraftValue] = useState<string | null>(null);
+  const displayedValue = draftValue ?? `${current}${unit}`;
   const setNext = (next: number) => onChange(Math.min(max, Math.max(min, next)));
+
+  const commitDraftValue = (nextDraftValue = displayedValue) => {
+    const parsedValue = Number.parseFloat(nextDraftValue);
+
+    if (Number.isNaN(parsedValue)) {
+      setDraftValue(null);
+      return;
+    }
+
+    const nextValue = Math.min(max, Math.max(min, parsedValue));
+    setDraftValue(null);
+    onChange(nextValue);
+  };
 
   return <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1" aria-label={label} title={label}>
     <button type="button" className={buttonClass} onClick={() => setNext(current - 1)} aria-label={`Decrease ${label}`} title={`Decrease ${label}`}><FiMinus /></button>
-    <span className="min-w-12 text-center text-xs font-black text-slate-600">{current}{unit}</span>
+    <input
+      type="text"
+      inputMode="decimal"
+      value={displayedValue}
+      onChange={(event) => setDraftValue(event.target.value)}
+      onFocus={() => setDraftValue(`${current}${unit}`)}
+      onBlur={() => commitDraftValue()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") {
+          event.currentTarget.blur();
+        }
+      }}
+      className="h-9 w-16 rounded-xl border border-transparent bg-transparent px-1 text-center text-xs font-black text-slate-600 outline-none transition focus:border-blue-400 focus:bg-white focus:text-slate-900"
+      aria-label={`${label} value`}
+      title={`${label} value`}
+    />
     <button type="button" className={buttonClass} onClick={() => setNext(current + 1)} aria-label={`Increase ${label}`} title={`Increase ${label}`}><FiPlus /></button>
   </div>;
 }
