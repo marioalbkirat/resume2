@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FiAlignCenter, FiAlignJustify, FiAlignLeft, FiAlignRight, FiRefreshCw, FiSquare } from "react-icons/fi";
+import { FiAlignCenter, FiAlignJustify, FiAlignLeft, FiAlignRight, FiRefreshCw } from "react-icons/fi";
 import { ColorTarget, VisualGroup, fonts, getVisualGroup, numberValue, visualGroups, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
 import { StyleObject } from "@/types/resume/ResumeStyle";
 
@@ -27,10 +27,42 @@ const borderSides = [
   { label: "Bottom", key: "Bottom" },
   { label: "Left", key: "Left" },
 ] as const;
-type PanelTab = "global" | "elements" | "selectors";
+type PanelTab = "global" | "selectors";
 
-function MiniButton({ active, children, onClick }: { active?: boolean; children: React.ReactNode; onClick: () => void }) {
-  return <button type="button" onClick={onClick} className={`min-h-11 flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition ${active ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"}`}>{children}</button>;
+const selectorLabels: Record<string, string> = {
+  div: "Container",
+  h1: "Main title",
+  h2: "Subtitle",
+  h3: "Section title",
+  h4: "Minimal title",
+  h5: "Small title",
+  h6: "Caption title",
+  section: "Section",
+  span: "Text",
+  p: "Paragraph",
+  i: "Icon",
+  a: "Link",
+  ul: "List",
+  ol: "List",
+  li: "List item",
+  img: "Image",
+  image: "Image",
+  heading: "Title",
+  paragraph: "Paragraph",
+  text: "Text",
+  list: "List",
+  listItem: "List item",
+  icon: "Icon",
+  link: "Link",
+  container: "Container",
+};
+
+function selectorLabel(selector: string) {
+  return selectorLabels[selector] ?? selector.replace(/[-_]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function MiniButton({ active, children, onClick, title }: { active?: boolean; children: React.ReactNode; onClick: () => void; title?: string }) {
+  return <button type="button" title={title} onClick={onClick} className={`min-h-11 flex-1 rounded-xl border px-3 py-2 text-sm font-semibold transition ${active ? "border-blue-500 bg-blue-50 text-blue-700 shadow-sm" : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"}`}>{children}</button>;
 }
 
 function Slider({ label, value, min, max, onChange, preview }: { label: string; value: number; min: number; max: number; onChange: (value: number) => void; preview?: React.ReactNode }) {
@@ -114,14 +146,13 @@ function Alignment({ active, onChange }: { active?: string | number; onChange: (
 
 export default function StylesPanel() {
   const controls = useVisualStylesPanel();
-  const { style, settings, selectedNode, selectedGroup, updateGlobal, updateSelector, updateElement, resetStyles } = controls;
+  const { style, settings, selectedGroup, updateGlobal, updateSelector, resetStyles } = controls;
   const [tab, setTab] = useState<PanelTab>("global");
   const [selector, setSelector] = useState<string>("section");
   const selectorOptions = useMemo(() => {
     const templateSelectors = Object.keys(style.selectors ?? {}).filter(Boolean);
     return templateSelectors.length > 0 ? templateSelectors : visualGroups;
   }, [style.selectors]);
-  const selectedPatch = style.elements?.[selectedNode?.id ?? ""] ?? {};
   const pageWidth = pageWidths[settings.pageSize];
   const leftColumnWidth = numberValue(style.global?.leftColumnWidth, settings.pageSize === "A4" ? 70 : 72);
   const rightColumnWidth = Math.max(0, Number((pageWidth - leftColumnWidth).toFixed(1)));
@@ -149,9 +180,8 @@ export default function StylesPanel() {
     {renderCommonControls(scope, target, current, update)}
   </div>;
 
-  return <div className="space-y-4"><div className={cardClass}><h3 className="text-xl font-black text-slate-950">Style Panel</h3><div className="mt-4 grid grid-cols-3 gap-2">{(["global", "elements", "selectors"] as PanelTab[]).map((item) => <MiniButton key={item} active={tab === item} onClick={() => setTab(item)}>{item}</MiniButton>)}</div></div>
+  return <div className="space-y-4"><div className={cardClass}><h3 className="text-xl font-black text-slate-950">Style Panel</h3><div className="mt-4 grid grid-cols-2 gap-2">{(["global", "selectors"] as PanelTab[]).map((item) => <MiniButton key={item} active={tab === item} onClick={() => setTab(item)}>{item}</MiniButton>)}</div></div>
     {tab === "global" && <div className={cardClass}><h4 className={titleClass}>Global resume container</h4><div className="space-y-3"><div className="grid grid-cols-2 gap-2">{fonts.map((font) => <MiniButton key={font.id} active={style.global?.fontFamily === font.value} onClick={() => updateGlobal({ fontFamily: font.value })}><span style={{ fontFamily: font.value }}>{font.name}</span></MiniButton>)}</div>{settings.columns === "ONE" && <ColorControl colors={controls} label="Page background" target={{ scope: "global", key: "backgroundColor", label: "Global background" }} />}<Slider label="Page padding" min={0} max={30} value={numberValue(style.global?.padding, 0)} onChange={(value) => updateGlobal({ padding: `${value}mm` })} preview={<span>{numberValue(style.global?.padding, 0)}mm</span>} />{settings.columns === "TWO" && <div className="rounded-xl border border-slate-200 p-3"><p className="mb-1 text-sm font-bold text-slate-700">Two-column layout</p><p className="mb-3 text-xs font-semibold text-slate-500">Columns always add up to {settings.pageSize} width ({pageWidth}mm).</p><Slider label="Left column width" min={40} max={Math.floor(pageWidth - 40)} value={leftColumnWidth} onChange={updateLeftColumn} preview={<span>{leftColumnWidth}mm</span>} /><Slider label="Right column width" min={40} max={Math.floor(pageWidth - 40)} value={rightColumnWidth} onChange={updateRightColumn} preview={<span>{rightColumnWidth}mm</span>} /><div className="mt-3 grid grid-cols-2 gap-3"><ColorControl colors={controls} label="Left color" target={{ scope: "global", key: "sidebarBackgroundColor", label: "Left column color" }} /><ColorControl colors={controls} label="Right color" target={{ scope: "global", key: "mainBackgroundColor", label: "Right column color" }} /></div><div className="mt-3"><BorderControl value={style.global?.columnBorder} onChange={(value) => updateGlobal({ columnBorder: value })} /></div></div>}</div></div>}
-    {tab === "selectors" && <div className={cardClass}><h4 className={titleClass}>Selectors</h4><div className="mb-4 grid grid-cols-2 gap-2">{selectorOptions.map((item) => <MiniButton key={item} active={activeSelector === item} onClick={() => setSelector(item)}>{item}</MiniButton>)}</div>{renderSmartControls("selector", activeSelector, style.selectors?.[activeSelector] ?? {}, (patch) => updateSelector(activeSelector, patch), groupForSelector(activeSelector))}</div>}
-    {tab === "elements" && <div className={cardClass}><h4 className={titleClass}>Active element</h4><p className="mb-4 text-sm text-slate-500">{selectedNode ? `${selectedNode.name} (${selectedGroup})` : "Click any element in the canvas first."}</p>{selectedNode ? renderSmartControls("element", selectedNode.id, selectedPatch, updateElement, selectedGroup) : <div className="rounded-xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-400"><FiSquare className="mx-auto mb-2" />No active element</div>}</div>}
+    {tab === "selectors" && <div className={cardClass}><h4 className={titleClass}>Selectors</h4><div className="mb-4 grid grid-cols-2 gap-2">{selectorOptions.map((item) => <MiniButton key={item} title={item} active={activeSelector === item} onClick={() => setSelector(item)}>{selectorLabel(item)}</MiniButton>)}</div>{renderSmartControls("selector", activeSelector, style.selectors?.[activeSelector] ?? {}, (patch) => updateSelector(activeSelector, patch), groupForSelector(activeSelector))}</div>}
     <div className="sticky bottom-3 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur"><button onClick={resetStyles} className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 font-bold text-slate-700 hover:bg-slate-200"><FiRefreshCw />Reset</button></div></div>;
 }
