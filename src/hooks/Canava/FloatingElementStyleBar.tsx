@@ -119,15 +119,6 @@ const alignItemsOptions = [
   { label: "Line up text", value: "baseline" },
 ];
 
-const alignContentOptions = [
-  { label: "At the start", value: "flex-start" },
-  { label: "In the middle", value: "center" },
-  { label: "At the end", value: "flex-end" },
-  { label: "Fill the space", value: "stretch" },
-  { label: "Space between", value: "space-between" },
-  { label: "Space around", value: "space-around" },
-];
-
 const fontWeightOptions = [
   { label: "Light", value: "300" },
   { label: "Normal", value: "400" },
@@ -432,7 +423,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         {isBoxLayout && <>
           <SelectControl label="Main placement" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
           <SelectControl label="Cross placement" value={current.alignItems} options={alignItemsOptions} onChange={(value) => patch({ display: "flex", alignItems: value })} />
-          <SelectControl label="Wrapped lines" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", alignContent: value })} />
+          <SelectControl label="Wrapped lines" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
           <DropdownPanel label="Margin">
             {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
           </DropdownPanel>
