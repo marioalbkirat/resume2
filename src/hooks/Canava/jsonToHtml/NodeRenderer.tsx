@@ -35,15 +35,22 @@ const contentKeyFor = (node: Schema) => node.id;
 const asCssProperties = (style?: StyleObject) => (style ?? {}) as CSSProperties;
 const borderLonghandPattern = /^border(Top|Right|Bottom|Left)(Width|Style|Color)?$/;
 const borderAxisPattern = /^border(Width|Style|Color)$/;
-const normalizeBorderStyle = (style: CSSProperties) => {
+const borderRadiusLonghandPattern = /^border(TopLeft|TopRight|BottomRight|BottomLeft)Radius$/;
+const normalizeStyleShorthands = (style: CSSProperties) => {
   const next = { ...style } as CSSProperties & Record<string, unknown>;
-  const hasSideBorder = Object.keys(next).some((key) => borderLonghandPattern.test(key));
-  if (hasSideBorder) {
+  const styleKeys = Object.keys(next);
+
+  if (styleKeys.some((key) => borderLonghandPattern.test(key))) {
     delete next.border;
-    Object.keys(next).forEach((key) => {
+    styleKeys.forEach((key) => {
       if (borderAxisPattern.test(key)) delete next[key];
     });
   }
+
+  if (styleKeys.some((key) => borderRadiusLonghandPattern.test(key))) {
+    delete next.borderRadius;
+  }
+
   return next as CSSProperties;
 };
 const selectorKeysFor = (node: Schema) => {
@@ -60,7 +67,7 @@ const selectorKeysFor = (node: Schema) => {
   if (node.tag === "div") keys.push("container");
   return [...new Set(keys.filter(Boolean))];
 };
-const getNodeStyle = (node: Schema, style?: ResumeStyle) => normalizeBorderStyle({
+const getNodeStyle = (node: Schema, style?: ResumeStyle) => normalizeStyleShorthands({
   ...selectorKeysFor(node).reduce((acc, key) => ({ ...acc, ...asCssProperties(style?.selectors?.[key]) }), {} as CSSProperties),
   ...asCssProperties(style?.elements?.[node.id]),
 });
