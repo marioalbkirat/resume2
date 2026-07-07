@@ -20,16 +20,33 @@ function compactFontName(value?: string | number) {
   return fonts.find((font) => font.value === value)?.name ?? "Font";
 }
 
-function NumberStepper({ label, value, fallback, min, max, onChange }: { label: string; value?: string | number; fallback: number; min: number; max: number; onChange: (value: number) => void }) {
+function NumberStepper({ label, value, fallback, min, max, unit = "px", onChange }: { label: string; value?: string | number; fallback: number; min: number; max: number; unit?: string; onChange: (value: number) => void }) {
   const current = numberValue(value, fallback);
   const setNext = (next: number) => onChange(Math.min(max, Math.max(min, next)));
 
   return <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1" aria-label={label} title={label}>
     <button type="button" className={buttonClass} onClick={() => setNext(current - 1)} aria-label={`Decrease ${label}`} title={`Decrease ${label}`}><FiMinus /></button>
-    <span className="min-w-12 text-center text-xs font-black text-slate-600">{current}px</span>
+    <span className="min-w-12 text-center text-xs font-black text-slate-600">{current}{unit}</span>
     <button type="button" className={buttonClass} onClick={() => setNext(current + 1)} aria-label={`Increase ${label}`} title={`Increase ${label}`}><FiPlus /></button>
   </div>;
 }
+
+function TextInput({ label, value, placeholder, onChange }: { label: string; value?: string | number; placeholder?: string; onChange: (value: string) => void }) {
+  return <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-black text-slate-500" title={label}>
+    {label}
+    <input
+      type="text"
+      value={String(value ?? "")}
+      placeholder={placeholder}
+      onChange={(event) => onChange(event.target.value)}
+      className={`${inputClass} w-32`}
+      aria-label={label}
+      title={label}
+    />
+  </label>;
+}
+
+const withPercent = (value: string | number) => `${value}%`;
 
 function ColorInput({ label, value, onChange }: { label: string; value?: string | number; onChange: (value: string) => void }) {
   const current = String(value ?? "#111827");
@@ -178,11 +195,19 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       {isImage && <>
-        <NumberStepper label="Image width" value={current.width} fallback={96} min={24} max={360} onChange={(value) => patch({ width: withPx(value) })} />
-        <NumberStepper label="Image height" value={current.height} fallback={96} min={24} max={360} onChange={(value) => patch({ height: withPx(value) })} />
+        <NumberStepper label="Margin" value={current.margin} fallback={0} min={0} max={120} onChange={(value) => patch({ margin: withPx(value) })} />
+        <NumberStepper label="Padding" value={current.padding} fallback={0} min={0} max={120} onChange={(value) => patch({ padding: withPx(value) })} />
+        <NumberStepper label="Image width" value={current.width} fallback={96} min={24} max={720} onChange={(value) => patch({ width: withPx(value) })} />
+        <NumberStepper label="Image height" value={current.height} fallback={96} min={24} max={720} onChange={(value) => patch({ height: withPx(value) })} />
+        <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderRadius: withPercent(value) })} />
+        <NumberStepper label="Top left radius" value={current.borderTopLeftRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderTopLeftRadius: withPercent(value) })} />
+        <NumberStepper label="Top right radius" value={current.borderTopRightRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderTopRightRadius: withPercent(value) })} />
+        <NumberStepper label="Bottom right radius" value={current.borderBottomRightRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderBottomRightRadius: withPercent(value) })} />
+        <NumberStepper label="Bottom left radius" value={current.borderBottomLeftRadius} fallback={0} min={0} max={100} unit="%" onChange={(value) => patch({ borderBottomLeftRadius: withPercent(value) })} />
         <select value={String(current.objectFit ?? "")} onChange={(event) => patch({ objectFit: event.target.value })} className={`${inputClass} w-28`} aria-label="Object fit" title="Object fit">
-          <option value="">Fit</option><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Fill</option><option value="scale-down">Scale down</option>
+          <option value="">Fit</option><option value="cover">Cover</option><option value="contain">Contain</option><option value="fill">Fill</option><option value="scale-down">Scale down</option><option value="none">None</option>
         </select>
+        <TextInput label="Border" value={current.border} placeholder="1px solid #000" onChange={(value) => patch({ border: value })} />
       </>}
 
       {isLayout && <>
@@ -192,7 +217,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       <ColorInput label="Bg" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />
-      <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />
+      {!isImage && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
     </div>
   </div>;
 
