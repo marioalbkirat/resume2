@@ -87,6 +87,7 @@ const radiusFields: SpacingField[] = [
   { label: "Bottom right", key: "BottomRight" },
   { label: "Bottom left", key: "BottomLeft" },
 ];
+const radiusCornerKeys = radiusFields.filter((field) => field.key).map((field) => `border${field.key}Radius`);
 
 const borderStyles = [
   { label: "No line", value: "none" },
@@ -218,6 +219,20 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
   const isImage = selectedGroup === "image";
   const isLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
   const patch = (next: StyleObject) => updateElement(next);
+  const imageRadiusValue = (key: string) => current[`border${key}Radius`] ?? current.borderRadius;
+  const updateImageRadius = (key: string, value: number) => {
+    const nextRadius = withPercent(value);
+
+    if (!key) {
+      patch({
+        borderRadius: nextRadius,
+        ...Object.fromEntries(radiusCornerKeys.map((cornerKey) => [cornerKey, nextRadius])),
+      });
+      return;
+    }
+
+    patch({ [`border${key}Radius`]: nextRadius });
+  };
 
   const startBarDrag = (event: PointerLikeEvent) => {
     const target = event.target as HTMLElement;
@@ -287,7 +302,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         <NumberStepper label="Image width" value={current.width} fallback={96} min={24} max={720} onChange={(value) => patch({ width: withPx(value) })} />
         <NumberStepper label="Image height" value={current.height} fallback={96} min={24} max={720} onChange={(value) => patch({ height: withPx(value) })} />
         <DropdownPanel label="Border radius">
-          {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={current[`border${field.key}Radius`]} fallback={numberValue(current.borderRadius, 0)} min={0} max={100} unit="%" onChange={(value) => patch({ [`border${field.key}Radius`]: withPercent(value) })} />)}
+          {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={imageRadiusValue(field.key)} fallback={numberValue(current.borderRadius, 0)} min={0} max={100} unit="%" onChange={(value) => updateImageRadius(field.key, value)} />)}
         </DropdownPanel>
         <DropdownPanel label="Border">
           {borderSideFields.map((field) => <BorderSideControls key={field.borderKey} field={field} current={current} patch={patch} />)}
