@@ -154,6 +154,13 @@ const textDecorationOptions = [
   { label: "Line through", value: "line-through" },
 ];
 
+const listStyleTypeOptions = [
+  { label: "•", value: "disc" },
+  { label: "✓", value: "'✓ '" },
+  { label: "—", value: "'— '" },
+  { label: "None", value: "none" },
+];
+
 function DropdownPanel({ label, children }: { label: string; children: React.ReactNode }) {
   return <details className="group relative" onPointerDown={(event) => event.stopPropagation()}>
     <summary className={`${buttonClass} cursor-pointer list-none gap-2 [&::-webkit-details-marker]:hidden`}>
@@ -279,9 +286,10 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
   if (typeof document === "undefined" || !selectedNode || !position) return null;
 
   const isTextLike = ["heading", "paragraph", "text", "link", "icon", "list", "listItem"].includes(selectedGroup);
-  const isRichTextElement = ["heading", "paragraph", "link"].includes(selectedGroup);
+  const isRichTextElement = ["heading", "paragraph", "text", "link"].includes(selectedGroup);
   const isImage = selectedGroup === "image";
-  const isBoxLayout = selectedGroup === "section" || selectedGroup === "container";
+  const isBoxLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
+  const isListElement = selectedGroup === "list" || selectedGroup === "listItem";
   const isLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
   const patch = (next: StyleObject) => updateElement(next);
   const imageRadiusValue = (key: string) => current[`border${key}Radius`] ?? current.borderRadius;
@@ -417,6 +425,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
 
       {isLayout && <>
         {isBoxLayout && <SelectControl label="Box style" value={current.display} options={displayOptions} onChange={(value) => patch({ display: value })} className="w-32" />}
+        {isListElement && <SelectControl label="List style" value={current.listStyleType} options={listStyleTypeOptions} onChange={(value) => patch({ listStyleType: value })} className="w-28" />}
         <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "row" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "row" })} title="Place items side by side">Side by side</button>
         <button type="button" className={`${buttonClass} ${current.display === "flex" && current.flexDirection === "column" ? activeButtonClass : ""}`} onClick={() => patch({ display: "flex", flexDirection: "column" })} title="Place items from top to bottom">Stacked</button>
         <NumberStepper label="Space between items" value={current.gap} fallback={12} min={0} max={120} onChange={(value) => patch({ gap: withPx(value) })} />
