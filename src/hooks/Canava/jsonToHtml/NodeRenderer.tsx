@@ -1,6 +1,8 @@
 "use client";
 
 import IconPreview from "@/hooks/PickIcons/icons/IconPreview";
+import IconSelector from "@/hooks/PickIcons/icons/PickIcons";
+import { getIconMetadata } from "@/hooks/PickIcons/icons";
 import { Content } from "@/types/resume/Content";
 import { Schema } from "@/types/resume/Section";
 import Image from "next/image";
@@ -127,6 +129,7 @@ const normalizeHref = (href: string) => {
 
 export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, onSelectNode, style, hoveredNodeId: controlledHoveredNodeId, setHoveredNodeId: controlledSetHoveredNodeId }: NodeRendererProps) {
   const [isRepeatableMenuOpen, setIsRepeatableMenuOpen] = useState(false);
+  const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [internalHoveredNodeId, setInternalHoveredNodeId] = useState<string | null>(null);
   const hoveredNodeId = controlledHoveredNodeId ?? internalHoveredNodeId;
   const setHoveredNodeId = controlledSetHoveredNodeId ?? setInternalHoveredNodeId;
@@ -161,11 +164,33 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     return [renderChild(child)];
   });
 
-  if (node.tag === "i") {
+  if (node.tag === "i" || node.tag === "svg") {
     const iconName = nodeContent?.value || "FaUser";
+    const selectedIcon = getIconMetadata(iconName.trim()) ?? null;
+
     return (
-      <span {...common} className={`inline-flex align-middle ${common.className}`}>
+      <span
+        {...common}
+        onClick={isEditable ? (event: React.MouseEvent<HTMLElement>) => {
+          event.stopPropagation();
+          onSelectNode?.(node.id);
+          setIsIconPickerOpen(true);
+        } : undefined}
+        className={`relative inline-flex align-middle ${common.className}`}
+      >
         <IconPreview name={iconName} aria-hidden />
+        {isEditable && isIconPickerOpen && (
+          <span className="absolute start-0 top-full z-50 mt-2 block w-80" onClick={(event) => event.stopPropagation()}>
+            <IconSelector
+              selectedIcon={selectedIcon}
+              initiallyOpen
+              onSelect={(icon) => {
+                onUpdate?.(key, icon.name, nodeContent?.prop);
+                setIsIconPickerOpen(false);
+              }}
+            />
+          </span>
+        )}
       </span>
     );
   }

@@ -8,10 +8,11 @@ interface IconSelectorProps {
     onSelect: (icon: IconItem) => void;
     selectedIcon?: IconItem | null;
     className?: string;
+    initiallyOpen?: boolean;
 }
 
-export default function IconSelector({ onSelect, selectedIcon, className = "" }: IconSelectorProps) {
-    const [isOpen, setIsOpen] = useState(false);
+export default function IconSelector({ onSelect, selectedIcon, className = "", initiallyOpen = false }: IconSelectorProps) {
+    const [isOpen, setIsOpen] = useState(initiallyOpen);
     const [searchTerm, setSearchTerm] = useState("");
     const filteredIcons = useMemo(() => searchIcons(searchTerm), [searchTerm]);
 

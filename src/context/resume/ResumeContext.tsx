@@ -88,6 +88,27 @@ const removeContentForNode = (node: Schema, nextContent: Record<string, Content>
     (node.children ?? []).forEach(child => removeContentForNode(child, nextContent));
 };
 
+
+const applyDraftSchemaToSections = (currentSections: Section[], draftSchema: Record<string, Schema> | undefined) => {
+    if (!draftSchema || !Object.keys(draftSchema).length) return currentSections;
+    const knownSectionIds = new Set(currentSections.map(section => section.id));
+    const updatedSections = currentSections.map(section => draftSchema[section.id] ? { ...section, schema: draftSchema[section.id] } : section);
+    const draftOnlySections = Object.entries(draftSchema)
+        .filter(([sectionId]) => !knownSectionIds.has(sectionId))
+        .map(([sectionId, schema], index) => ({
+            id: sectionId,
+            name: `Draft section ${index + 1}`,
+            target: "RESUME" as const,
+            visibility: "PRIVATE" as const,
+            authorId: "",
+            schema,
+            content: {},
+            createdAt: new Date(),
+            updatedAt: new Date(),
+        } as Section));
+    return [...updatedSections, ...draftOnlySections];
+};
+
 const mergeSectionContent = (sections: Section[], distribution: Distribution, currentContent: Record<string, Content>) => {
     const next = { ...currentContent };
     sections.forEach((section) => {
@@ -141,6 +162,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         setSettingsState(templateSettings({ ...(sourceTemplate ?? {}), settings: draft.settings } as ResumeTemplate));
         setDistributionState(normalizeDistribution(draft.distribution, draft.settings));
         setStyle(draft.style);
+        setSections(currentSections => applyDraftSchemaToSections(currentSections, draft.schema));
         setContent(draft.content);
         setSelectedNodeId(null);
     }, [templates]);
