@@ -95,7 +95,7 @@ function RepeatableItemActions({ nodeId, parentId, onAddListItem, onDeleteListIt
   };
 
   return (
-    <div ref={menuRef} className="absolute end-0 top-0 z-20 print:hidden">
+    <div ref={menuRef} className="absolute top-0 z-20 print:hidden" style={{ right: "-20px" }}>
       <button
         type="button"
         onClick={(event) => { event.stopPropagation(); setIsMenuOpen(open => !open); onSelectNode?.(nodeId); }}
@@ -129,6 +129,11 @@ const normalizeHref = (href: string) => {
 
 export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, onSelectNode, style, hoveredNodeId: controlledHoveredNodeId, setHoveredNodeId: controlledSetHoveredNodeId }: NodeRendererProps) {
   const [isRepeatableMenuOpen, setIsRepeatableMenuOpen] = useState(false);
+  const [isImageMenuOpen, setIsImageMenuOpen] = useState(false);
+  const [isLinkMenuOpen, setIsLinkMenuOpen] = useState(false);
+  const imageMenuRef = useRef<HTMLSpanElement>(null);
+  const linkMenuRef = useRef<HTMLSpanElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const iconRootRef = useRef<HTMLSpanElement>(null);
   const iconPickerRef = useRef<HTMLSpanElement>(null);
@@ -151,6 +156,22 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     return () => document.removeEventListener("pointerdown", closeIconPickerOnOutsidePointerDown, true);
   }, [isIconPickerOpen]);
 
+
+  useEffect(() => {
+    if (!isImageMenuOpen && !isLinkMenuOpen) return;
+
+    const closeNodeMenus = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (imageMenuRef.current?.contains(target) || linkMenuRef.current?.contains(target)) return;
+      setIsImageMenuOpen(false);
+      setIsLinkMenuOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeNodeMenus);
+    return () => document.removeEventListener("pointerdown", closeNodeMenus);
+  }, [isImageMenuOpen, isLinkMenuOpen]);
+
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
   if ((node.tag === "i" || node.tag === "svg") && (node.role === "sectionIcon" || node.role === "sectionTitleIcon") && !showSectionIcons) return null;
 
@@ -171,6 +192,25 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     onMouseLeave: isEditable ? () => setHoveredNodeId((current) => current === node.id ? null : current) : undefined,
     className: `${isSelected ? "ring-2 ring-blue-500 ring-offset-1 rounded-sm bg-blue-50/20 shadow-[0_0_0_4px_rgba(59,130,246,0.08)]" : ""} ${isHovered && !isSelected ? "ring-1 ring-blue-200 ring-offset-1 rounded-sm" : ""} ${isEditable ? "cursor-pointer transition-all duration-200 ease-out" : ""}`,
     style: nodeStyle,
+  };
+
+
+  const uploadReplacementImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const response = await fetch("/api/resume/upload-image", { method: "POST", body: formData });
+    const result = await response.json() as { path?: string; error?: string };
+
+    if (!response.ok || !result.path) throw new Error(result.error || "Failed to upload image");
+    onUpdate?.(key, result.path, { ...nodeContent?.prop, src: result.path });
+  };
+
+  const editLinkHref = () => {
+    const currentHref = nodeContent?.prop?.href || "";
+    const nextHref = window.prompt("Edit link href", currentHref);
+    if (nextHref === null) return;
+    onUpdate?.(key, nodeContent?.value || "", { ...nodeContent?.prop, href: normalizeHref(nextHref) });
   };
 
   const renderChild = (child: Schema) => (
@@ -214,7 +254,45 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   }
 
   if (node.tag === "img") {
-    return <Image {...common} className={`inline-block ${common.className}`} src={nodeContent?.value || "/placeholder.png"} alt={nodeContent?.prop?.alt || "Image"} width={100} height={100} />
+    const imageSrc = nodeContent?.prop?.src || nodeContent?.value || "/placeholder.png";
+
+    return (
+      <span ref={imageMenuRef} className="group/image relative inline-block align-middle">
+        <Image {...common} className={`inline-block ${common.className}`} src={imageSrc} alt={nodeContent?.prop?.alt || "Image"} width={100} height={100} />
+        {isEditable && (
+          <>
+            <button
+              type="button"
+              onClick={(event) => { event.stopPropagation(); onSelectNode?.(node.id); setIsImageMenuOpen(open => !open); }}
+              className="absolute top-0 z-20 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/95 text-slate-600 opacity-100 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:opacity-0 md:group-hover/image:opacity-100 md:group-focus-within/image:opacity-100 print:hidden"
+              style={{ right: "-20px" }}
+              aria-label="Open image actions"
+              aria-expanded={isImageMenuOpen}
+              title="Image actions"
+            >
+              <FiMoreVertical size={16} aria-hidden />
+            </button>
+            {isImageMenuOpen && (
+              <div className="absolute z-30 mt-1 min-w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-xl print:hidden" style={{ right: "-20px", top: "28px" }}>
+                <button type="button" onClick={(event) => { event.stopPropagation(); imageInputRef.current?.click(); }} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50">Replace image</button>
+              </div>
+            )}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (!file) return;
+                void uploadReplacementImage(file).finally(() => setIsImageMenuOpen(false));
+              }}
+            />
+          </>
+        )}
+      </span>
+    );
   }
 
   if (node.tag === "a") {
@@ -222,19 +300,31 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     const isExternalLink = /^https?:\/\//i.test(href);
 
     return (
-      <a
-        {...common}
-        href={isEditable ? undefined : href}
-        data-pdf-link={!isEditable && href !== "#" ? href : undefined}
-        target={!isEditable && isExternalLink ? "_blank" : undefined}
-        rel={!isEditable && isExternalLink ? "noopener noreferrer" : undefined}
-        contentEditable={isEditable ? true : undefined}
-        suppressContentEditableWarning
-        onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")}
-        style={{ ...nodeStyle, outline: "none" }}
-      >
-        {nodeContent?.value ?? ""}
-      </a>
+      <span ref={linkMenuRef} className="group/link relative inline-block align-baseline">
+        <a
+          {...common}
+          href={isEditable ? undefined : href}
+          data-pdf-link={!isEditable && href !== "#" ? href : undefined}
+          target={!isEditable && isExternalLink ? "_blank" : undefined}
+          rel={!isEditable && isExternalLink ? "noopener noreferrer" : undefined}
+          contentEditable={isEditable ? true : undefined}
+          suppressContentEditableWarning
+          onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "", nodeContent?.prop)}
+          style={{ ...nodeStyle, outline: "none" }}
+        >
+          {nodeContent?.value ?? ""}
+        </a>
+        {isEditable && (
+          <>
+            <button type="button" onClick={(event) => { event.stopPropagation(); onSelectNode?.(node.id); setIsLinkMenuOpen(open => !open); }} className="absolute top-0 z-20 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/95 text-slate-600 opacity-100 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:opacity-0 md:group-hover/link:opacity-100 md:group-focus-within/link:opacity-100 print:hidden" style={{ right: "-20px" }} aria-label="Open link actions" aria-expanded={isLinkMenuOpen} title="Link actions"><FiMoreVertical size={16} aria-hidden /></button>
+            {isLinkMenuOpen && (
+              <div className="absolute z-30 mt-1 min-w-32 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-xl print:hidden" style={{ right: "-20px", top: "28px" }}>
+                <button type="button" onClick={(event) => { event.stopPropagation(); editLinkHref(); setIsLinkMenuOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50">Edit href</button>
+              </div>
+            )}
+          </>
+        )}
+      </span>
     );
   }
 
