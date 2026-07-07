@@ -130,9 +130,26 @@ const normalizeHref = (href: string) => {
 export default function NodeRenderer({ node, sectionId, content = {}, isEditable = true, selectedNodeId, showIcons = true, showSectionIcons = true, direction = "LTR", onUpdate, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, onSelectNode, style, hoveredNodeId: controlledHoveredNodeId, setHoveredNodeId: controlledSetHoveredNodeId }: NodeRendererProps) {
   const [isRepeatableMenuOpen, setIsRepeatableMenuOpen] = useState(false);
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+  const iconRootRef = useRef<HTMLSpanElement>(null);
+  const iconPickerRef = useRef<HTMLSpanElement>(null);
   const [internalHoveredNodeId, setInternalHoveredNodeId] = useState<string | null>(null);
   const hoveredNodeId = controlledHoveredNodeId ?? internalHoveredNodeId;
   const setHoveredNodeId = controlledSetHoveredNodeId ?? setInternalHoveredNodeId;
+
+  useEffect(() => {
+    if (!isIconPickerOpen) return;
+
+    const closeIconPickerOnOutsidePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (iconPickerRef.current?.contains(target) || iconRootRef.current?.contains(target)) return;
+
+      setIsIconPickerOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeIconPickerOnOutsidePointerDown, true);
+    return () => document.removeEventListener("pointerdown", closeIconPickerOnOutsidePointerDown, true);
+  }, [isIconPickerOpen]);
 
   if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
   if ((node.tag === "i" || node.tag === "svg") && (node.role === "sectionIcon" || node.role === "sectionTitleIcon") && !showSectionIcons) return null;
@@ -171,6 +188,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     return (
       <span
         {...common}
+        ref={iconRootRef}
         onClick={isEditable ? (event: React.MouseEvent<HTMLElement>) => {
           event.stopPropagation();
           onSelectNode?.(node.id);
@@ -180,7 +198,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
       >
         <IconPreview name={iconName} aria-hidden />
         {isEditable && isIconPickerOpen && (
-          <span className="absolute start-0 top-full z-50 mt-2 block w-80" onClick={(event) => event.stopPropagation()}>
+          <span ref={iconPickerRef} className="absolute start-0 top-full z-50 mt-2 block w-80" onClick={(event) => event.stopPropagation()}>
             <IconSelector
               selectedIcon={selectedIcon}
               initiallyOpen
