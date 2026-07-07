@@ -1,12 +1,15 @@
 "use client";
 
-import { RefObject, useEffect, useMemo, useState } from "react";
+import { RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { FiAlignCenter, FiAlignLeft, FiAlignRight, FiBold, FiItalic, FiMinus, FiPlus } from "react-icons/fi";
 import { fonts, numberValue, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
 import { StyleObject } from "@/types/resume/ResumeStyle";
 
 type FloatingElementStyleBarProps = { canvasRef: RefObject<HTMLDivElement | null> };
 type BarPosition = { left: number; top: number };
+type DragState = { pointerId: number; offsetX: number; offsetY: number };
+type ManualBarPosition = BarPosition & { nodeId: string };
 
 const buttonClass = "inline-flex h-9 min-w-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700";
 const activeButtonClass = "border-blue-500 bg-blue-50 text-blue-700";
@@ -41,6 +44,9 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
   const { selectedNode, selectedGroup, style, updateElement } = useVisualStylesPanel();
   const current = useMemo(() => style.elements?.[selectedNode?.id ?? ""] ?? {}, [selectedNode?.id, style.elements]);
   const [position, setPosition] = useState<BarPosition | null>(null);
+  const [manualPosition, setManualPosition] = useState<ManualBarPosition | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -56,10 +62,9 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         return;
       }
 
-      const canvasRect = canvas.getBoundingClientRect();
       const elementRect = selectedElement.getBoundingClientRect();
-      const top = Math.max(8, elementRect.top - canvasRect.top - 64 + canvas.scrollTop);
-      const left = Math.min(Math.max(8, elementRect.left - canvasRect.left + elementRect.width / 2 + canvas.scrollLeft), Math.max(8, canvas.clientWidth - 8));
+      const top = Math.max(12, elementRect.top - 72);
+      const left = Math.min(Math.max(12, elementRect.left + elementRect.width / 2), window.innerWidth - 12);
       setPosition({ left, top });
     };
 
@@ -76,21 +81,71 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
     };
   }, [canvasRef, selectedNode?.id]);
 
-  if (!selectedNode || !position) return null;
+  useEffect(() => {
+    if (!dragState) return;
+
+    const moveBar = (event: PointerEvent) => {
+      if (event.pointerId !== dragState.pointerId) return;
+
+      const bar = barRef.current;
+      const rect = bar?.getBoundingClientRect();
+      const width = rect?.width ?? 0;
+      const height = rect?.height ?? 0;
+      const left = Math.min(Math.max(8, event.clientX - dragState.offsetX), Math.max(8, window.innerWidth - width - 8));
+      const top = Math.min(Math.max(8, event.clientY - dragState.offsetY), Math.max(8, window.innerHeight - height - 8));
+      if (selectedNode?.id) setManualPosition({ nodeId: selectedNode.id, left, top });
+    };
+
+    const stopDragging = (event: PointerEvent) => {
+      if (event.pointerId === dragState.pointerId) setDragState(null);
+    };
+
+    window.addEventListener("pointermove", moveBar);
+    window.addEventListener("pointerup", stopDragging);
+    window.addEventListener("pointercancel", stopDragging);
+
+    return () => {
+      window.removeEventListener("pointermove", moveBar);
+      window.removeEventListener("pointerup", stopDragging);
+      window.removeEventListener("pointercancel", stopDragging);
+    };
+  }, [dragState, selectedNode?.id]);
+
+  if (typeof document === "undefined" || !selectedNode || !position) return null;
 
   const isTextLike = ["heading", "paragraph", "text", "link", "icon", "list", "listItem"].includes(selectedGroup);
   const isImage = selectedGroup === "image";
   const isLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
   const patch = (next: StyleObject) => updateElement(next);
 
-  return <div
+  const selectedManualPosition = manualPosition?.nodeId === selectedNode.id ? manualPosition : null;
+  const displayedPosition = selectedManualPosition ?? position;
+  const isManuallyPlaced = Boolean(selectedManualPosition);
+
+  const bar = <div
+    ref={barRef}
     data-floating-style-bar="true"
-    className="absolute z-50 max-w-[min(92vw,920px)] -translate-x-1/2 rounded-[1.35rem] border border-slate-200 bg-white/95 p-2 shadow-2xl shadow-slate-900/15 backdrop-blur"
-    style={{ left: position.left, top: position.top }}
+    className={`fixed z-[9999] max-w-[calc(100vw-1rem)] rounded-[1.35rem] border border-slate-200 bg-white/95 p-2 shadow-2xl shadow-slate-900/15 backdrop-blur ${isManuallyPlaced ? "" : "-translate-x-1/2"}`}
+    style={{ left: displayedPosition.left, top: displayedPosition.top }}
     onPointerDown={(event) => event.stopPropagation()}
     onClick={(event) => event.stopPropagation()}
   >
-    <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap px-1">
+    <div className="flex max-w-full flex-wrap items-center gap-2 overflow-x-hidden px-1">
+      <button
+        type="button"
+        className="inline-flex h-9 cursor-grab touch-none items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 text-xs font-black text-slate-500 active:cursor-grabbing"
+        aria-label="Move style bar"
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const rect = event.currentTarget.closest<HTMLElement>('[data-floating-style-bar="true"]')?.getBoundingClientRect();
+          if (!rect) return;
+          setManualPosition({ nodeId: selectedNode.id, left: rect.left, top: rect.top });
+          setDragState({ pointerId: event.pointerId, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top });
+        }}
+      >
+        Move
+      </button>
       <span className="rounded-2xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{selectedNode.name}</span>
 
       {isTextLike && <>
@@ -125,4 +180,6 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />
     </div>
   </div>;
+
+  return createPortal(bar, document.body);
 }
