@@ -2,7 +2,7 @@
 
 import React, { RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FiAlignCenter, FiAlignLeft, FiAlignRight, FiBold, FiChevronDown, FiItalic, FiMinus, FiPlus } from "react-icons/fi";
+import { FiAlignCenter, FiAlignJustify, FiAlignLeft, FiAlignRight, FiBold, FiChevronDown, FiItalic, FiMinus, FiPlus, FiUnderline } from "react-icons/fi";
 import { fonts, numberValue, useVisualStylesPanel, withPx } from "@/hooks/useVisualStylesPanel";
 import { StyleObject } from "@/types/resume/ResumeStyle";
 
@@ -126,6 +126,32 @@ const alignContentOptions = [
   { label: "Fill the space", value: "stretch" },
   { label: "Space between", value: "space-between" },
   { label: "Space around", value: "space-around" },
+];
+
+const fontWeightOptions = [
+  { label: "Light", value: "300" },
+  { label: "Normal", value: "400" },
+  { label: "Bold", value: "700" },
+];
+
+const fontStyleOptions = [
+  { label: "Normal", value: "normal" },
+  { label: "Italic", value: "italic" },
+  { label: "Oblique", value: "oblique" },
+];
+
+const textTransformOptions = [
+  { label: "None", value: "none" },
+  { label: "Uppercase", value: "uppercase" },
+  { label: "Lowercase", value: "lowercase" },
+  { label: "Capitalize", value: "capitalize" },
+];
+
+const textDecorationOptions = [
+  { label: "None", value: "none" },
+  { label: "Underline", value: "underline" },
+  { label: "Overline", value: "overline" },
+  { label: "Line through", value: "line-through" },
 ];
 
 function DropdownPanel({ label, children }: { label: string; children: React.ReactNode }) {
@@ -253,6 +279,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
   if (typeof document === "undefined" || !selectedNode || !position) return null;
 
   const isTextLike = ["heading", "paragraph", "text", "link", "icon", "list", "listItem"].includes(selectedGroup);
+  const isRichTextElement = ["heading", "paragraph", "link"].includes(selectedGroup);
   const isImage = selectedGroup === "image";
   const isBoxLayout = selectedGroup === "section" || selectedGroup === "container";
   const isLayout = ["section", "container", "list", "listItem"].includes(selectedGroup);
@@ -337,12 +364,35 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
           {fonts.map((font) => <option key={font.id} value={font.value}>{font.name}</option>)}
         </select>
         <NumberStepper label="Font size" value={current.fontSize} fallback={selectedGroup === "heading" ? 22 : 14} min={8} max={96} onChange={(value) => patch({ fontSize: withPx(value) })} />
-        <button type="button" className={`${buttonClass} ${current.fontWeight === 700 ? activeButtonClass : ""}`} onClick={() => patch({ fontWeight: current.fontWeight === 700 ? 400 : 700 })} title="Bold"><FiBold /></button>
-        <button type="button" className={`${buttonClass} ${current.fontStyle === "italic" ? activeButtonClass : ""}`} onClick={() => patch({ fontStyle: current.fontStyle === "italic" ? "normal" : "italic" })} title="Italic"><FiItalic /></button>
+        {isRichTextElement ? <SelectControl label="Font weight" value={current.fontWeight} options={fontWeightOptions} onChange={(value) => patch({ fontWeight: Number(value) })} className="w-32" /> : <button type="button" className={`${buttonClass} ${current.fontWeight === 700 ? activeButtonClass : ""}`} onClick={() => patch({ fontWeight: current.fontWeight === 700 ? 400 : 700 })} title="Bold"><FiBold /></button>}
+        {isRichTextElement ? <SelectControl label="Font style" value={current.fontStyle} options={fontStyleOptions} onChange={(value) => patch({ fontStyle: value })} className="w-32" /> : <button type="button" className={`${buttonClass} ${current.fontStyle === "italic" ? activeButtonClass : ""}`} onClick={() => patch({ fontStyle: current.fontStyle === "italic" ? "normal" : "italic" })} title="Italic"><FiItalic /></button>}
         <button type="button" className={`${buttonClass} ${current.textAlign === "left" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "left" })} title="Align left"><FiAlignLeft /></button>
         <button type="button" className={`${buttonClass} ${current.textAlign === "center" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "center" })} title="Align center"><FiAlignCenter /></button>
         <button type="button" className={`${buttonClass} ${current.textAlign === "right" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "right" })} title="Align right"><FiAlignRight /></button>
+        {isRichTextElement && <button type="button" className={`${buttonClass} ${current.textAlign === "justify" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "justify" })} title="Align justify"><FiAlignJustify /></button>}
         <ColorInput label="Text" value={current.color} onChange={(value) => patch({ color: value })} />
+        {isRichTextElement && <>
+          <SelectControl label="Transform" value={current.textTransform} options={textTransformOptions} onChange={(value) => patch({ textTransform: value })} className="w-32" />
+          <NumberStepper label="Line height" value={numberValue(current.lineHeight, 1.5) * 10} fallback={15} min={8} max={32} unit="" onChange={(value) => patch({ lineHeight: value / 10 })} />
+          <NumberStepper label="Letter spacing" value={current.letterSpacing} fallback={0} min={-5} max={20} onChange={(value) => patch({ letterSpacing: withPx(value) })} />
+          <NumberStepper label="Word spacing" value={current.wordSpacing} fallback={0} min={0} max={30} onChange={(value) => patch({ wordSpacing: withPx(value) })} />
+          {selectedGroup === "link" && <>
+            <SelectControl label="Decoration" value={current.textDecoration} options={textDecorationOptions} onChange={(value) => patch({ textDecoration: value })} className="w-32" />
+            <button type="button" className={`${buttonClass} ${current.textDecoration === "underline" ? activeButtonClass : ""}`} onClick={() => patch({ textDecoration: current.textDecoration === "underline" ? "none" : "underline" })} title="Underline"><FiUnderline /></button>
+          </>}
+          <DropdownPanel label="Margin">
+            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Padding">
+            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Padding ${field.label}`} value={current[`padding${field.key}`]} fallback={numberValue(current.padding, 0)} min={0} max={120} onChange={(value) => patch({ [`padding${field.key}`]: withPx(value) })} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Border radius">
+            {radiusFields.map((field) => <NumberStepper key={field.key || "all"} label={`${field.label} radius`} value={boxRadiusValue(field.key)} fallback={numberValue(current.borderRadius, 0)} min={0} max={120} onChange={(value) => updateBoxRadius(field.key, value)} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Border">
+            {borderSideFields.map((field) => <BorderSideControls key={field.widthKey} field={field} current={current} patch={patch} />)}
+          </DropdownPanel>
+        </>}
       </>}
 
       {isImage && <>
@@ -390,7 +440,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </>}
 
       <ColorInput label="Bg" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />
-      {!isImage && !isBoxLayout && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
+      {!isImage && !isBoxLayout && !isRichTextElement && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
     </div>
   </div>;
 
