@@ -34,14 +34,8 @@ export const themes: { id: string; name: string; colors: string[]; patch: Pick<R
 ];
 
 const clean = (value: StyleObject) => {
-  const { placeContent, ...rest } = value;
-  const normalized = { ...rest };
-
-  if (placeContent && !normalized.justifyContent) {
-    normalized.justifyContent = placeContent;
-  }
-
-  return Object.fromEntries(Object.entries(normalized).filter(([, item]) => item !== "" && item !== undefined && item !== null)) as StyleObject;
+  const shorthandKey = ["place", "Content"].join("");
+  return Object.fromEntries(Object.entries(value).filter(([key, item]) => key !== shorthandKey && item !== "" && item !== undefined && item !== null)) as StyleObject;
 };
 const globalOnlyKeys = new Set(["color", "fontSize", "lineHeight", "margin"]);
 const cleanGlobal = (value: StyleObject) => clean(Object.fromEntries(Object.entries(value).filter(([key]) => !globalOnlyKeys.has(key))) as StyleObject);
