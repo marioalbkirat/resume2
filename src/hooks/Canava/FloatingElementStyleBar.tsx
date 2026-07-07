@@ -119,6 +119,22 @@ const alignItemsOptions = [
   { label: "Line up text", value: "baseline" },
 ];
 
+const alignContentOptions = [
+  { label: "At the start", value: "flex-start" },
+  { label: "In the middle", value: "center" },
+  { label: "At the end", value: "flex-end" },
+  { label: "Space between", value: "space-between" },
+  { label: "Space around", value: "space-around" },
+  { label: "Even spacing", value: "space-evenly" },
+  { label: "Fill the space", value: "stretch" },
+];
+
+const flexWrapOptions = [
+  { label: "Single line", value: "nowrap" },
+  { label: "Wrap", value: "wrap" },
+  { label: "Wrap reversed", value: "wrap-reverse" },
+];
+
 const fontWeightOptions = [
   { label: "Light", value: "300" },
   { label: "Normal", value: "400" },
@@ -423,7 +439,8 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         {isBoxLayout && <>
           <SelectControl label="Main placement" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
           <SelectControl label="Cross placement" value={current.alignItems} options={alignItemsOptions} onChange={(value) => patch({ display: "flex", alignItems: value })} />
-          <SelectControl label="Wrapped lines" value={current.justifyContent} options={justifyContentOptions} onChange={(value) => patch({ display: "flex", justifyContent: value })} />
+          <SelectControl label="Wrapping" value={current.flexWrap} options={flexWrapOptions} onChange={(value) => patch({ display: "flex", flexWrap: value })} />
+          <SelectControl label="Wrapped lines" value={current.alignContent} options={alignContentOptions} onChange={(value) => patch({ display: "flex", flexWrap: current.flexWrap ?? "wrap", alignContent: value, placeContent: "" })} />
           <DropdownPanel label="Margin">
             {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
           </DropdownPanel>

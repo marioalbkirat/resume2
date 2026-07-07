@@ -58,6 +58,11 @@ const normalizeStyleShorthands = (style: CSSProperties) => {
     delete next.borderRadius;
   }
 
+  if (next.placeContent && !next.justifyContent) {
+    next.justifyContent = next.placeContent;
+  }
+  delete next.placeContent;
+
   return next as CSSProperties;
 };
 const selectorKeysFor = (node: Schema) => {

@@ -33,7 +33,16 @@ export const themes: { id: string; name: string; colors: string[]; patch: Pick<R
   { id: "mono", name: "Editorial", colors: ["#ffffff", "#111827", "#9ca3af"], patch: { global: { backgroundColor: "#ffffff", color: "#111827", "--resume-primary": "#111827" }, selectors: { heading: { color: "#111827", borderBottom: "1px solid #d1d5db" }, icon: { color: "#111827" }, section: { backgroundColor: "transparent" } } } },
 ];
 
-const clean = (value: StyleObject) => Object.fromEntries(Object.entries(value).filter(([, item]) => item !== "" && item !== undefined && item !== null)) as StyleObject;
+const clean = (value: StyleObject) => {
+  const { placeContent, ...rest } = value;
+  const normalized = { ...rest };
+
+  if (placeContent && !normalized.justifyContent) {
+    normalized.justifyContent = placeContent;
+  }
+
+  return Object.fromEntries(Object.entries(normalized).filter(([, item]) => item !== "" && item !== undefined && item !== null)) as StyleObject;
+};
 const globalOnlyKeys = new Set(["color", "fontSize", "lineHeight", "margin"]);
 const cleanGlobal = (value: StyleObject) => clean(Object.fromEntries(Object.entries(value).filter(([key]) => !globalOnlyKeys.has(key))) as StyleObject);
 const walk = (node: Schema, items: Schema[] = []) => { items.push(node); node.children?.forEach((child) => walk(child, items)); return items; };

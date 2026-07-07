@@ -264,7 +264,7 @@ Return a JSON array of SectionStyle objects matching the exact structure:
 **Available CSS Properties:**
 - backgroundColor, color, padding, margin, fontSize, fontWeight, textAlign
 - border, borderRadius, borderBottom, borderTop, borderLeft, borderRight
-- display, flexDirection, alignItems, justifyContent, gap
+- display, flexDirection, flexWrap, alignItems, justifyContent, alignContent, gap
 - lineHeight, letterSpacing, textTransform, boxShadow
 - listStyle, width, height, objectFit, cursor, textDecoration
 
@@ -388,7 +388,7 @@ function sanitizeStyles(styles: Record<string, string>): Record<string, string> 
         'backgroundColor', 'color', 'padding', 'margin', 'fontSize',
         'fontWeight', 'textAlign', 'border', 'borderRadius', 'borderBottom',
         'borderTop', 'borderLeft', 'borderRight', 'display', 'flexDirection',
-        'alignItems', 'justifyContent', 'gap', 'lineHeight', 'letterSpacing',
+        'alignItems', 'justifyContent', 'alignContent', 'flexWrap', 'gap', 'lineHeight', 'letterSpacing',
         'textTransform', 'boxShadow', 'listStyle', 'width', 'height',
         'objectFit', 'cursor', 'textDecoration'
     ];
