@@ -82,9 +82,10 @@ export function getVisualGroup(node?: Pick<Schema, "tag" | "type"> | null): Visu
 }
 
 export function useVisualStylesPanel() {
-  const { style, setStyle, sections, selectedNodeId, settings } = useResumeBuilder();
+  const { style, setStyle, sections, selectedNodeId, selectedNodeIds, settings } = useResumeBuilder();
   const nodes = useMemo(() => sections.flatMap((section) => walk(section.schema).map((node) => ({ ...node, sectionName: section.name }))), [sections]);
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+  const selectedNodes = selectedNodeIds.map((id) => nodes.find((node) => node.id === id)).filter((node): node is typeof nodes[number] => Boolean(node));
   const selectedGroup = getVisualGroup(selectedNode);
 
   useEffect(() => {
@@ -101,12 +102,16 @@ export function useVisualStylesPanel() {
   });
   const updateGlobal = (patch: StyleObject) => updateStyle((previous) => ({ ...previous, global: cleanGlobal({ ...previous.global, ...patch }) }));
   const updateSelector = (target: string, patch: StyleObject) => updateStyle((previous) => ({ ...previous, selectors: { ...previous.selectors, [target]: clean({ ...(previous.selectors?.[target] ?? {}), ...patch }) } }));
-  const updateElement = (patch: StyleObject) => selectedNode && updateStyle((previous) => ({ ...previous, elements: { ...previous.elements, [selectedNode.id]: clean({ ...(previous.elements?.[selectedNode.id] ?? {}), ...patch }) } }));
+  const updateElements = (patch: StyleObject) => selectedNodes.length && updateStyle((previous) => ({
+    ...previous,
+    elements: selectedNodes.reduce((elements, node) => ({ ...elements, [node.id]: clean({ ...(elements?.[node.id] ?? {}), ...patch }) }), previous.elements),
+  }));
+  const updateElement = (patch: StyleObject) => selectedNode && updateElements(patch);
   const setColor = (target: ColorTarget, color: string) => { if (target.scope === "global") updateGlobal({ [target.key]: color }); if (target.scope === "selector" && target.target) updateSelector(target.target, { [target.key]: color }); if (target.scope === "element") updateElement({ [target.key]: color }); };
   const valueFor = (target: ColorTarget) => String(target.scope === "global" ? style.global?.[target.key] ?? "#111827" : target.scope === "selector" && target.target ? style.selectors?.[target.target]?.[target.key] ?? "#111827" : selectedNode ? style.elements?.[selectedNode.id]?.[target.key] ?? "#111827" : "#111827");
   const applyTheme = (theme: typeof themes[number]) => updateStyle((previous) => ({ ...previous, global: clean({ ...previous.global, ...theme.patch.global }), selectors: { ...previous.selectors, ...theme.patch.selectors } }));
   const resetStyles = () => setStyle(emptyResumeStyle);
   const applyStyles = () => setStyle((previous) => ({ ...previous, global: cleanGlobal({ ...defaultGlobalStyle, ...(previous.global ?? {}) }) }));
 
-  return { style: { ...style, global: cleanGlobal({ ...defaultGlobalStyle, ...(style.global ?? {}) }) }, settings, selectedNode, selectedGroup, themes, fonts, updateGlobal, updateSelector, updateElement, setColor, valueFor, applyTheme, resetStyles, applyStyles };
+  return { style: { ...style, global: cleanGlobal({ ...defaultGlobalStyle, ...(style.global ?? {}) }) }, settings, selectedNode, selectedNodes, selectedGroup, themes, fonts, updateGlobal, updateSelector, updateElement, updateElements, setColor, valueFor, applyTheme, resetStyles, applyStyles };
 }

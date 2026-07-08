@@ -220,8 +220,9 @@ function ColorInput({ label, value, onChange }: { label: string; value?: string 
 }
 
 export default function FloatingElementStyleBar({ canvasRef }: FloatingElementStyleBarProps) {
-  const { selectedNode, selectedGroup, style, updateElement } = useVisualStylesPanel();
+  const { selectedNode, selectedNodes, selectedGroup, style, updateElement } = useVisualStylesPanel();
   const current = useMemo(() => style.elements?.[selectedNode?.id ?? ""] ?? {}, [selectedNode?.id, style.elements]);
+  const selectedCount = selectedNodes.length;
   const [position, setPosition] = useState<BarPosition | null>(null);
   const [manualPosition, setManualPosition] = useState<ManualBarPosition | null>(null);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -371,7 +372,7 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       >
         Move
       </button>
-      <span className="rounded-2xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{selectedNode.name}</span>
+      <span className="rounded-2xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{selectedCount > 1 ? `${selectedCount} selected: ${selectedNode.name}` : selectedNode.name}</span>
 
       {selectedGroup === "icon" && <>
         <ColorInput label="Icon color" value={current.color} onChange={(value) => patch({ color: value })} />

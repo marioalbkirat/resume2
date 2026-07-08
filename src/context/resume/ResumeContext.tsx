@@ -30,6 +30,7 @@ type ResumeBuilderContextType = {
     style: ResumeStyle;
     mode: BuilderMode;
     selectedNodeId: string | null;
+    selectedNodeIds: string[];
     pageCount: number;
     setPageCount: Dispatch<SetStateAction<number>>;
     setDistribution: Dispatch<SetStateAction<Distribution>>;
@@ -37,6 +38,7 @@ type ResumeBuilderContextType = {
     setStyle: Dispatch<SetStateAction<ResumeStyle>>;
     setMode: Dispatch<SetStateAction<BuilderMode>>;
     setSelectedNodeId: Dispatch<SetStateAction<string | null>>;
+    setSelectedNodeIds: Dispatch<SetStateAction<string[]>>;
     toggleMode: () => void;
     activateTemplate: (template: ResumeTemplate) => void;
     activateDraft: (draft: Draft) => void;
@@ -135,7 +137,23 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
     const [settings, setSettingsState] = useState<Settings>(defaultSettings);
     const [style, setStyle] = useState<ResumeStyle>(defaultStyle);
     const [mode, setMode] = useState<BuilderMode>("edit");
-    const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+    const [selectedNodeIdState, setSelectedNodeIdState] = useState<string | null>(null);
+    const [selectedNodeIds, setSelectedNodeIdsState] = useState<string[]>([]);
+    const selectedNodeId = selectedNodeIdState;
+    const setSelectedNodeId: Dispatch<SetStateAction<string | null>> = useCallback((value) => {
+        setSelectedNodeIdState(previous => {
+            const next = typeof value === "function" ? (value as (current: string | null) => string | null)(previous) : value;
+            setSelectedNodeIdsState(next ? [next] : []);
+            return next;
+        });
+    }, []);
+    const setSelectedNodeIds: Dispatch<SetStateAction<string[]>> = useCallback((value) => {
+        setSelectedNodeIdsState(previous => {
+            const next = typeof value === "function" ? (value as (current: string[]) => string[])(previous) : value;
+            setSelectedNodeIdState(next[0] ?? null);
+            return next;
+        });
+    }, []);
     const [pageCount, setPageCount] = useState(1);
 
     const setDistribution: Dispatch<SetStateAction<Distribution>> = useCallback((value) => setDistributionState(prev => typeof value === "function" ? (value as (previous: Distribution) => Distribution)(prev) : value), []);
@@ -154,8 +172,8 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         setStyle((template.style as ResumeStyle) ?? defaultStyle);
         setContent(mergeSectionContent(sections, nextDistribution, templateContent(template)));
         setActiveDraft(null);
-        setSelectedNodeId(null);
-    }, [sections]);
+        setSelectedNodeIds([]);
+    }, [sections, setSelectedNodeIds]);
 
 
     const activateDraft = useCallback((draft: Draft) => {
@@ -167,8 +185,8 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         setStyle(draft.style);
         setSections(currentSections => applyDraftSchemaToSections(currentSections, draft.schema));
         setContent(draft.content);
-        setSelectedNodeId(null);
-    }, [templates]);
+        setSelectedNodeIds([]);
+    }, [templates, setSelectedNodeIds]);
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -343,9 +361,9 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         setSelectedResume(previous => previous?.id === templateId ? null : previous);
     }, []);
 
-    const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeId(null); return next; }), []);
+    const toggleMode = useCallback(() => setMode(prev => { const next = prev === "edit" ? "preview" : "edit"; if (next === "preview") setSelectedNodeIds([]); return next; }), [setSelectedNodeIds]);
 
-    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, setSelectedNodeId, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem, duplicateListItem, moveListItem, deleteDraft, deletePrivateTemplate }}>{children}</ResumeBuilderContext.Provider>;
+    return <ResumeBuilderContext.Provider value={{ selectedResume, setSelectedResume, templates, setTemplates, drafts, activeDraft, setDrafts, setActiveDraft, sections, setSections, content, setContent, distribution, resumeDraftSchema, setDistribution, settings, setSettings, style, setStyle, mode, setMode, selectedNodeId, selectedNodeIds, setSelectedNodeId, setSelectedNodeIds, pageCount, setPageCount, toggleMode, activateTemplate, activateDraft, addSectionToDistribution, removeSectionFromDistribution, updateDistributionItem, updateContent, addListItem, deleteListItem, duplicateListItem, moveListItem, deleteDraft, deletePrivateTemplate }}>{children}</ResumeBuilderContext.Provider>;
 }
 
 export function useResumeBuilder() { const context = useContext(ResumeBuilderContext); if (!context) throw new Error("useResumeBuilder must be used inside ResumeBuilderProvider"); return context; }
