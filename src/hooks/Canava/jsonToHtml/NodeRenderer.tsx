@@ -8,7 +8,7 @@ import { Schema } from "@/types/resume/Section";
 import Image from "next/image";
 import { CSSProperties, Dispatch, ElementType, SetStateAction, useEffect, useRef, useState } from "react";
 import { ResumeStyle, StyleObject } from "@/types/resume/ResumeStyle";
-import { FiChevronDown, FiChevronUp, FiCopy, FiMoreVertical, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp, FiCopy, FiMoreVertical, FiTrash2 } from "react-icons/fi";
 
 type NodeRendererProps = {
   node: Schema;
@@ -82,8 +82,6 @@ const getNodeStyle = (node: Schema, style?: ResumeStyle) => normalizeStyleShorth
 });
 type RepeatableItemActionsProps = {
   nodeId: string;
-  parentId?: string;
-  onAddListItem?: (listNodeId: string) => void;
   onDeleteListItem?: (nodeId: string) => void;
   onDuplicateListItem?: (nodeId: string) => void;
   onMoveListItem?: (nodeId: string, direction: "up" | "down") => void;
@@ -91,7 +89,7 @@ type RepeatableItemActionsProps = {
   setIsMenuOpen: (open: boolean | ((current: boolean) => boolean)) => void;
 };
 
-function RepeatableItemActions({ nodeId, parentId, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, isMenuOpen, setIsMenuOpen }: RepeatableItemActionsProps) {
+function RepeatableItemActions({ nodeId, onDeleteListItem, onDuplicateListItem, onMoveListItem, isMenuOpen, setIsMenuOpen }: RepeatableItemActionsProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -123,7 +121,6 @@ function RepeatableItemActions({ nodeId, parentId, onAddListItem, onDeleteListIt
       </button>
       {isMenuOpen && (
         <div className="absolute end-0 mt-1 min-w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-xl">
-          <button type="button" onClick={runAction(() => parentId && onAddListItem?.(parentId))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiPlus aria-hidden />Add Item</button>
           <button type="button" onClick={runAction(() => onDuplicateListItem?.(nodeId))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiCopy aria-hidden />Duplicate</button>
           <button type="button" onClick={runAction(() => onMoveListItem?.(nodeId, "up"))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiChevronUp aria-hidden />Move Up</button>
           <button type="button" onClick={runAction(() => onMoveListItem?.(nodeId, "down"))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiChevronDown aria-hidden />Move Down</button>
@@ -357,7 +354,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
       >
         {nodeContent?.value && <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent.value}</span>}
         {children}
-        {isEditable && <RepeatableItemActions nodeId={node.id} parentId={node.parentId} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} isMenuOpen={isRepeatableMenuOpen} setIsMenuOpen={setIsRepeatableMenuOpen} />}
+        {isEditable && <RepeatableItemActions nodeId={node.id} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} isMenuOpen={isRepeatableMenuOpen} setIsMenuOpen={setIsRepeatableMenuOpen} />}
       </li>
     );
   }
