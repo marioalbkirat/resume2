@@ -24,6 +24,8 @@ export interface ResumeTemplateDB {
     likes: number;
     forks: number;
     authorId: string;
+    authorName?: string;
+    communityRequested: boolean;
     createdAt: Date;
     updatedAt: Date;
     drafts: Draft[];

@@ -8,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id                 String               @id @default(cuid())
-  name               String               @db.VarChar(60)
-  email              String?              @unique @db.VarChar(100)
-  isAdmin            Boolean              @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  id                 String                @id @default(cuid())
+  name               String                @db.VarChar(60)
+  email              String?               @unique @db.VarChar(100)
+  isAdmin            Boolean               @default(false)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
   drafts             ResumeDraft[]
   resumeTemplates    ResumeTemplate[]
   sections           Section[]
@@ -24,28 +24,29 @@ model User {
 }
 
 model ResumeTemplate {
-  id                String             @id @default(cuid())
-  name              String
-  visibility        Visibility
-  previewImage      String
-  category          ResumeCategory     @default(REGULAR)
-  targetRoles       String[]
-  description       String             @db.VarChar(200)
-  settings          Json
-  distribution      Json
-  style             Json
-  content           Json
-  downloads         Int                @default(0)
-  likes             Int                @default(0)
-  forks             Int                @default(0)
-  authorId          String
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  user              User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  drafts            ResumeDraft[]
-  templateLikes     TemplateLike[]
-  templateDownloads TemplateDownload[]
-  templateForks     TemplateFork[]
+  id                 String             @id @default(cuid())
+  name               String
+  visibility         Visibility
+  previewImage       String
+  category           ResumeCategory     @default(REGULAR)
+  targetRoles        String[]
+  description        String             @db.VarChar(200)
+  settings           Json
+  distribution       Json
+  style              Json
+  content            Json
+  downloads          Int                @default(0)
+  likes              Int                @default(0)
+  forks              Int                @default(0)
+  authorId           String
+  communityRequested Boolean            @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  user               User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  drafts             ResumeDraft[]
+  templateLikes      TemplateLike[]
+  templateDownloads  TemplateDownload[]
+  templateForks      TemplateFork[]
 }
 
 model TemplateLike {

@@ -3,6 +3,7 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { captureResumePreview } from "@/lib/resume/screenshot";
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 
 const DEMO_USER_ID = "cmqzvcgn80000t9x89yni4fg9";
 
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
         const name = formData.get("name") as string;
         const description = formData.get("description") as string;
         const category = formData.get("category") as "ATS" | "REGULAR";
-        const visibility = formData.get("visibility") as "PRIVATE" | "COMMUNITY";
+        const requestedVisibility = formData.get("visibility") as "PRIVATE" | "COMMUNITY";
         const targetRoles = JSON.parse((formData.get("targetRoles") as string) || "[]") as string[];
         const previewImage = formData.get("previewImage") as File | null;
 
@@ -34,14 +35,15 @@ export async function POST(request: NextRequest) {
             data: {
                 name,
                 description,
-                visibility: visibility === "COMMUNITY" ? "COMMUNITY" : "PRIVATE",
+                visibility: "PRIVATE",
+                communityRequested: requestedVisibility === "COMMUNITY",
                 category: category === "ATS" ? "ATS" : "REGULAR",
                 targetRoles,
                 previewImage: previewImagePath,
-                settings: draft.settings,
-                distribution: draft.distribution,
-                style: draft.style,
-                content: draft.content,
+                settings: draft.settings as Prisma.InputJsonValue,
+                distribution: draft.distribution as Prisma.InputJsonValue,
+                style: draft.style as Prisma.InputJsonValue,
+                content: draft.content as Prisma.InputJsonValue,
                 authorId: DEMO_USER_ID,
             },
         });
