@@ -373,7 +373,19 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
       </button>
       <span className="rounded-2xl bg-slate-900 px-3 py-2 text-xs font-black text-white">{selectedNode.name}</span>
 
-      {isTextLike && <>
+      {selectedGroup === "icon" && <>
+        <ColorInput label="Icon color" value={current.color} onChange={(value) => patch({ color: value })} />
+        <ColorInput label="Icon background" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />
+        <NumberStepper label="Font size" value={current.fontSize} fallback={20} min={8} max={96} onChange={(value) => patch({ fontSize: withPx(value) })} />
+        <DropdownPanel label="Padding">
+          {spacingFields.map((field) => <NumberStepper key={field.key} label={`Padding ${field.label}`} value={current[`padding${field.key}`]} fallback={numberValue(current.padding, 0)} min={0} max={120} onChange={(value) => patch({ [`padding${field.key}`]: withPx(value) })} />)}
+        </DropdownPanel>
+        <DropdownPanel label="Margin">
+          {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
+        </DropdownPanel>
+      </>}
+
+      {isTextLike && selectedGroup !== "icon" && <>
         <select value={String(current.fontFamily ?? "")} onChange={(event) => patch({ fontFamily: event.target.value })} className={`${inputClass} w-32`} aria-label="Font family" title="Font family">
           <option value="">{compactFontName(current.fontFamily)}</option>
           {fonts.map((font) => <option key={font.id} value={font.value}>{font.name}</option>)}
@@ -386,14 +398,6 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         <button type="button" className={`${buttonClass} ${current.textAlign === "right" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "right" })} title="Align right"><FiAlignRight /></button>
         {isRichTextElement && <button type="button" className={`${buttonClass} ${current.textAlign === "justify" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "justify" })} title="Align justify"><FiAlignJustify /></button>}
         <ColorInput label="Text" value={current.color} onChange={(value) => patch({ color: value })} />
-        {selectedGroup === "icon" && <>
-          <DropdownPanel label="Margin">
-            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
-          </DropdownPanel>
-          <DropdownPanel label="Padding">
-            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Padding ${field.label}`} value={current[`padding${field.key}`]} fallback={numberValue(current.padding, 0)} min={0} max={120} onChange={(value) => patch({ [`padding${field.key}`]: withPx(value) })} />)}
-          </DropdownPanel>
-        </>}
         {isRichTextElement && <>
           <SelectControl label="Transform" value={current.textTransform} options={textTransformOptions} onChange={(value) => patch({ textTransform: value })} className="w-32" />
           <NumberStepper label="Line height" value={numberValue(current.lineHeight, 1.5) * 10} fallback={15} min={8} max={32} unit="" onChange={(value) => patch({ lineHeight: value / 10 })} />
@@ -464,8 +468,8 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         </>}
       </>}
 
-      <ColorInput label="Bg" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />
-      {!isImage && !isBoxLayout && !isRichTextElement && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
+      {selectedGroup !== "icon" && <ColorInput label="Bg" value={current.backgroundColor} onChange={(value) => patch({ backgroundColor: value })} />}
+      {selectedGroup !== "icon" && !isImage && !isBoxLayout && !isRichTextElement && <NumberStepper label="Radius" value={current.borderRadius} fallback={0} min={0} max={120} onChange={(value) => patch({ borderRadius: withPx(value) })} />}
     </div>
   </div>;
 
