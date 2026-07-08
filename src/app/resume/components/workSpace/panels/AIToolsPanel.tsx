@@ -76,7 +76,26 @@ export default function AIToolsPanel() {
     const filteredFeatures = aiFeatures.filter(feature => activeCategory === "all" || feature.category === activeCategory);
 
     const resetResults = () => { setAnalysisResult(null); setSuggestions([]); setGeneratedContent(""); setPendingContent(null); setPendingStyle(null); setErrorMessage(""); };
-    const textFrom = (result: Record<string, unknown>) => String(result.content ?? result.summary ?? result.explanation ?? "");
+    const textFrom = (result: Record<string, unknown>) => typeof result.content === "string" ? result.content : String(result.summary ?? result.explanation ?? "");
+    const normalizeContentResult = (resultContent: unknown) => {
+        if (!resultContent || typeof resultContent !== "object" || Array.isArray(resultContent)) return null;
+
+        const entries = Object.entries(resultContent as Record<string, Partial<Content>>);
+        if (!entries.length) return null;
+
+        return entries.reduce<Record<string, Content>>((next, [key, value]) => {
+            const current = content[key];
+            const id = typeof value?.id === "string" ? value.id : current?.id ?? key;
+            const type = typeof value?.type === "string" ? value.type : current?.type ?? "text";
+            const nextValue = typeof value?.value === "string" ? value.value : current?.value ?? "";
+            next[key] = { ...current, ...value, id, type, value: nextValue, prop: value?.prop ?? current?.prop };
+            return next;
+        }, {});
+    };
+    const summarizeContentChanges = (result: Record<string, unknown>, fallbackSummary: string) => [
+        typeof result.summary === "string" ? result.summary : fallbackSummary,
+        ...(((result.changes ?? result.suggestions) as unknown[]) ?? []).filter((item): item is string => typeof item === "string"),
+    ].filter(Boolean).join("\n• ");
     const skillSectionIds = new Set(sections.filter(section => section.name.toLowerCase().includes("skill")).flatMap(section => {
         const ids: string[] = [];
         const collect = (node: { id: string; children?: { id: string; children?: unknown[] }[] }) => {
@@ -107,7 +126,15 @@ export default function AIToolsPanel() {
             if (["analyze", "match-score", "ats-optimize"].includes(activeFeature ?? "")) setAnalysisResult(result);
             else if (activeFeature === "keywords") setSuggestions([...(result.priorityKeywords ?? []), ...(result.keywords ?? [])].map((text: string, index: number) => ({ id: `${index}-${text}`, text, type: "keyword" })));
             else if (activeFeature === "skills") setSuggestions([...(result.prioritySkills ?? []), ...(result.skills ?? [])].map((text: string, index: number) => ({ id: `${index}-${text}`, text, type: "keyword" })));
-            else if (["optimize", "targeted-resume"].includes(activeFeature ?? "")) { setGeneratedContent([result.summary, ...(result.changes ?? result.suggestions ?? [])].filter(Boolean).join("\n• ")); setPendingContent(result.content ?? null); }
+            else if (["translation", "optimize", "targeted-resume"].includes(activeFeature ?? "")) {
+                const normalizedContent = normalizeContentResult(result.content);
+                if (normalizedContent) {
+                    setGeneratedContent(summarizeContentChanges(result, activeFeature === "translation" ? `Translated resume content to ${targetLanguage}.` : "Updated resume content is ready to review."));
+                    setPendingContent(normalizedContent);
+                } else {
+                    setGeneratedContent(textFrom(result));
+                }
+            }
             else if (activeFeature === "design-resume") { setGeneratedContent(result.explanation ?? "A complete resume style is ready to apply."); setPendingStyle(result.style ?? null); }
             else setGeneratedContent(textFrom(result));
         } catch (error) {
@@ -142,7 +169,7 @@ export default function AIToolsPanel() {
             <button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium cursor-pointer flex items-center justify-center gap-2">{isAnalyzing && <FaSpinner className="w-5 h-5 animate-spin" />}{isAnalyzing ? "Processing..." : "Run AI Tool"}</button>
             {renderAnalysis()}
             {suggestions.length > 0 && <div className="space-y-3"><h4 className="font-semibold text-gray-900">AI Results</h4><div className="flex flex-wrap gap-2">{suggestions.map(suggestion => <span key={suggestion.id} className="px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700">{suggestion.text}</span>)}</div></div>}
-            {renderGenerated(activeFeature === "optimize" ? "Approve Optimization" : activeFeature === "targeted-resume" ? "Approve Suggestions" : activeFeature === "design-resume" ? "Apply Design" : undefined, activeFeature === "design-resume" ? approveStyle : approveContent)}
+            {renderGenerated(activeFeature === "translation" ? "Apply Translation" : activeFeature === "optimize" ? "Approve Optimization" : activeFeature === "targeted-resume" ? "Approve Suggestions" : activeFeature === "design-resume" ? "Apply Design" : undefined, activeFeature === "design-resume" ? approveStyle : approveContent)}
             {activeFeature === "analyze" && analysisResult?.recommendations?.length && <div className="pt-2"><h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2"><FaCrown className="text-yellow-600" /> Best Next Step</h4><p className="text-sm text-gray-700">Use Targeted Resume after reviewing these recommendations to tailor the full resume to this job description.</p></div>}
         </div></div>}
     </div>;
