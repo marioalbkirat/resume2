@@ -1,5 +1,6 @@
 // app/components/resume/cards/ResumeCardSEO.tsx
 "use client";
+import Image from "next/image";
 import { FiEye, FiHeart, FiDownload } from "react-icons/fi";
 
 interface ResumeCardSEOProps {
@@ -12,14 +13,14 @@ interface ResumeCardSEOProps {
     onPreview: (id: string) => void;
 }
 
-export default function ResumeCardSEO({ 
-    id, 
-    name, 
-    previewImage, 
-    views, 
-    downloads, 
-    likes, 
-    onPreview 
+export default function ResumeCardSEO({
+    id,
+    name,
+    previewImage,
+    views,
+    downloads,
+    likes,
+    onPreview
 }: ResumeCardSEOProps) {
     const formatNumber = (num: number): string => {
         if (num >= 10000) return `${(num / 1000).toFixed(0)}k`;
@@ -32,10 +33,12 @@ export default function ResumeCardSEO({
             {/* Image Preview */}
             <div className="relative bg-linear-to-br from-gray-100 to-gray-200 aspect-3/4 flex items-center justify-center overflow-hidden">
                 {previewImage ? (
-                    <img 
-                        src={previewImage} 
+                    <Image
+                        src={previewImage}
                         alt={name}
                         className="w-full h-full object-cover"
+                        width={300}
+                        height={200}
                     />
                 ) : (
                     <div className="text-center">
@@ -43,7 +46,7 @@ export default function ResumeCardSEO({
                         <p className="text-gray-500 text-sm">Preview</p>
                     </div>
                 )}
-                
+
                 {/* Preview Button - Eye Icon */}
                 <button
                     onClick={(e) => {

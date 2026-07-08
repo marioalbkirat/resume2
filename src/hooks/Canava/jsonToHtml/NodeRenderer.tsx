@@ -121,7 +121,7 @@ function RepeatableItemActions({ nodeId, onDeleteListItem, onDuplicateListItem, 
         <FiMoreVertical size={16} aria-hidden />
       </button>
       {isMenuOpen && (
-        <div className="absolute end-0 mt-1 min-w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-xl">
+        <div className="absolute inset-e-0 mt-1 min-w-36 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-xl">
           <button type="button" onClick={runAction(() => onDuplicateListItem?.(nodeId))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiCopy aria-hidden />Duplicate</button>
           <button type="button" onClick={runAction(() => onMoveListItem?.(nodeId, "up"))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiChevronUp aria-hidden />Move Up</button>
           <button type="button" onClick={runAction(() => onMoveListItem?.(nodeId, "down"))} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50"><FiChevronDown aria-hidden />Move Down</button>
@@ -271,7 +271,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
       >
         <IconPreview name={iconName} aria-hidden />
         {isEditable && isIconPickerOpen && (
-          <span ref={iconPickerRef} className="absolute start-0 top-full z-50 mt-2 block w-80" onClick={(event) => event.stopPropagation()}>
+          <span ref={iconPickerRef} className="absolute inset-s-0 top-full z-50 mt-2 block w-80" onClick={(event) => event.stopPropagation()}>
             <IconSelector
               selectedIcon={selectedIcon}
               initiallyOpen
