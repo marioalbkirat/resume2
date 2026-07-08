@@ -1,13 +1,13 @@
 // app/components/resume/cards/ResumeCardSEO.tsx
 "use client";
 import Image from "next/image";
-import { FiEye, FiHeart, FiDownload } from "react-icons/fi";
+import { FiEye, FiGitBranch, FiHeart, FiDownload } from "react-icons/fi";
 
 interface ResumeCardSEOProps {
     id: string;
     name: string;
     previewImage?: string;
-    views: number;
+    forks: number;
     downloads: number;
     likes: number;
     onPreview: (id: string) => void;
@@ -17,7 +17,7 @@ export default function ResumeCardSEO({
     id,
     name,
     previewImage,
-    views,
+    forks,
     downloads,
     likes,
     onPreview
@@ -65,7 +65,7 @@ export default function ResumeCardSEO({
                 <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1">
-                            <FiEye className="w-3 h-3" /> {formatNumber(views)}
+                            <FiGitBranch className="w-3 h-3" /> {formatNumber(forks)}
                         </span>
                         <span className="flex items-center gap-1">
                             <FiHeart className="w-3 h-3" /> {formatNumber(likes)}

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { NextRequest } from "next/server";
 import puppeteer from "puppeteer";
 
+type PrismaTransactionClient = Omit<typeof prisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -11,11 +13,20 @@ function safeFilename(value: string) {
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
-    const draft = await prisma.resumeDraft.findUnique({ where: { slug }, select: { title: true } });
+    const draft = await prisma.resumeDraft.findUnique({ where: { slug }, select: { id: true, title: true, userId: true } });
 
     if (!draft) {
         return new Response("Resume not found", { status: 404 });
     }
+
+    await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+        await tx.resumeDraft.update({ where: { id: draft.id }, data: { isDownloaded: true } });
+        await tx.userResumeAnalytics.upsert({
+            where: { userId: draft.userId },
+            create: { userId: draft.userId, downloadsCount: 1 },
+            update: { downloadsCount: { increment: 1 } },
+        });
+    });
 
     const browser = await puppeteer.launch({
         headless: true,

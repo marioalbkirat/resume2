@@ -1,13 +1,15 @@
 "use client";
 import Image from "next/image";
-import { FiEye, FiHeart, FiDownload, FiTrash2 } from "react-icons/fi";
+import { FiGitBranch, FiHeart, FiDownload, FiTrash2 } from "react-icons/fi";
 interface ResumeCardWorkspaceProps {
     id: string;
     name: string;
     previewImage?: string;
-    views: number;
+    forks: number;
     downloads: number;
     likes: number;
+    isLiked?: boolean;
+    onLike?: (id: string) => void;
     isSelected?: boolean;
     authorName?: string;
     onClick: (id: string) => void;
@@ -17,9 +19,11 @@ export default function ResumeCardWorkspace({
     id,
     name,
     previewImage,
-    views,
+    forks,
     downloads,
     likes,
+    isLiked = false,
+    onLike,
     isSelected = false,
     authorName,
     onClick,
@@ -61,11 +65,11 @@ export default function ResumeCardWorkspace({
                 <div className="flex items-center justify-between text-xs text-gray-500">
                     <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1">
-                            <FiEye className="w-3 h-3" /> {formatNumber(views)}
+                            <FiGitBranch className="w-3 h-3" /> {formatNumber(forks)}
                         </span>
-                        <span className="flex items-center gap-1">
-                            <FiHeart className="w-3 h-3" /> {formatNumber(likes)}
-                        </span>
+                        <button type="button" onClick={(event) => { event.stopPropagation(); onLike?.(id); }} className={`flex items-center gap-1 transition ${isLiked ? "text-rose-600" : "hover:text-rose-500"}`} aria-pressed={isLiked} title={isLiked ? "Unlike template" : "Like template"}>
+                            <FiHeart className={`w-3 h-3 ${isLiked ? "fill-current" : ""}`} /> {formatNumber(likes)}
+                        </button>
                         <span className="flex items-center gap-1">
                             <FiDownload className="w-3 h-3" /> {formatNumber(downloads)}
                         </span>

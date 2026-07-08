@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { NextRequest } from "next/server";
 import puppeteer from "puppeteer";
 
+type PrismaTransactionClient = Omit<typeof prisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
@@ -16,6 +18,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!template) {
         return new Response("Template not found", { status: 404 });
     }
+
+    await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+        await tx.templateDownload.upsert({
+            where: { userId_templateId: { userId: "cmqzvcgn80000t9x89yni4fg9", templateId: id } },
+            create: { userId: "cmqzvcgn80000t9x89yni4fg9", templateId: id },
+            update: {},
+        });
+        await tx.resumeTemplate.update({ where: { id }, data: { downloads: { increment: 1 } } });
+    });
 
     const browser = await puppeteer.launch({
         headless: true,

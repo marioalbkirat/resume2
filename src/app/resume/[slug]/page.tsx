@@ -9,6 +9,13 @@ export default async function ActiveResumePage({ params, searchParams }: { param
     const isExport = (await searchParams).export === "pdf";
     const draft = await prisma.resumeDraft.findUnique({ where: { slug } });
     if (!draft) notFound();
+    if (!isExport) {
+        await prisma.userResumeAnalytics.upsert({
+            where: { userId: draft.userId },
+            create: { userId: draft.userId, visitsCount: 1 },
+            update: { visitsCount: { increment: 1 } },
+        });
+    }
 
     const settings = normalizeResumeSettings(draft.settings);
     const distribution = normalizeResumeDistribution(draft.distribution);

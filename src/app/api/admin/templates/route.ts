@@ -54,8 +54,6 @@ export async function POST(request: NextRequest) {
                 category,
                 downloads: 0,
                 likes: 0,
-                views: 0,
-                saves: 0,
                 forks: 0,
             }
         });
@@ -84,13 +82,14 @@ export async function GET() {
                 style: true,
                 content: true,
                 authorId: true,
-                views: true,
+                forks: true,
                 category: true,
+                templateLikes: { where: { userId: 'cmqzvcgn80000t9x89yni4fg9' }, select: { userId: true } },
                 createdAt: true
             }
         });
 
-        return NextResponse.json(templates);
+        return NextResponse.json(templates.map(({ templateLikes, ...template }: { templateLikes: { userId: string }[]; [key: string]: unknown }) => ({ ...template, isLiked: templateLikes.length > 0 })));
     } catch (error) {
         console.error('Error fetching templates:', error);
         return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 });
