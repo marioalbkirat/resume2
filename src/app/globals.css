@@ -218,3 +218,26 @@ input[type="color"]::-webkit-color-swatch {
         transform: scale(1.1);
     }
 }
+/* Responsive resume builder canvas scaling */
+.resume-canvas-shell {
+  --resume-canvas-scale: min(1, calc((100vw - 24px) / 816px));
+  width: calc(816px * var(--resume-canvas-scale));
+  min-height: calc(1058px * var(--resume-canvas-scale));
+}
+
+.resume-canvas-shell > #resume {
+  transform: scale(var(--resume-canvas-scale));
+  transform-origin: top center;
+}
+
+@media (min-width: 1024px) {
+  .resume-canvas-shell {
+    --resume-canvas-scale: 1;
+    width: auto;
+    min-height: auto;
+  }
+
+  .resume-canvas-shell > #resume {
+    transform: none;
+  }
+}
