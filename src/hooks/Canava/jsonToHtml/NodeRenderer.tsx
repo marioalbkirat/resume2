@@ -151,6 +151,8 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   const iconRootRef = useRef<HTMLSpanElement>(null);
   const iconPickerRef = useRef<HTMLSpanElement>(null);
   const [internalHoveredNodeId, setInternalHoveredNodeId] = useState<string | null>(null);
+  const [isTextEditing, setIsTextEditing] = useState(false);
+  const textEditRef = useRef<HTMLElement>(null);
   const hoveredNodeId = controlledHoveredNodeId ?? internalHoveredNodeId;
   const setHoveredNodeId = controlledSetHoveredNodeId ?? setInternalHoveredNodeId;
 
@@ -185,9 +187,6 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     return () => document.removeEventListener("pointerdown", closeNodeMenus);
   }, [isImageMenuOpen, isLinkMenuOpen]);
 
-  if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
-  if ((node.tag === "i" || node.tag === "svg") && (node.role === "sectionIcon" || node.role === "sectionTitleIcon") && !showSectionIcons) return null;
-
   const key = contentKeyFor(node);
   const nodeContent = content[key];
   const hasText = !TEXTLESS_TAGS.has(node.tag);
@@ -195,6 +194,27 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
   const isHovered = hoveredNodeId === node.id;
   const Tag = node.tag as ElementType;
   const nodeStyle = getNodeStyle(node, style);
+  const canEditText = isEditable && isTextEditing;
+
+  useEffect(() => {
+    if (!canEditText) return;
+    textEditRef.current?.focus();
+  }, [canEditText]);
+
+  const startTextEditing = (event: React.MouseEvent<HTMLElement>) => {
+    if (!isEditable) return;
+    event.stopPropagation();
+    onSelectNode?.(node.id, event);
+    setIsTextEditing(true);
+  };
+
+  const finishTextEditing = (value: string, props?: Record<string, string>) => {
+    onUpdate?.(key, value, props);
+    setIsTextEditing(false);
+  };
+
+  if ((node.tag === "i" || node.tag === "svg") && !showIcons) return null;
+  if ((node.tag === "i" || node.tag === "svg") && (node.role === "sectionIcon" || node.role === "sectionTitleIcon") && !showSectionIcons) return null;
 
   const common = {
     dir: direction.toLowerCase(),
@@ -320,9 +340,11 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
           data-pdf-link={!isEditable && href !== "#" ? href : undefined}
           target={!isEditable && isExternalLink ? "_blank" : undefined}
           rel={!isEditable && isExternalLink ? "noopener noreferrer" : undefined}
-          contentEditable={isEditable ? true : undefined}
+          ref={textEditRef as React.Ref<HTMLAnchorElement>}
+          contentEditable={canEditText ? true : undefined}
           suppressContentEditableWarning
-          onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "", nodeContent?.prop)}
+          onDoubleClick={startTextEditing}
+          onBlur={(e: React.FocusEvent<HTMLAnchorElement>) => finishTextEditing(e.currentTarget.textContent ?? "", nodeContent?.prop)}
           style={{ ...nodeStyle, outline: "none" }}
         >
           {nodeContent?.value ?? ""}
@@ -353,7 +375,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
             : undefined}
         className={`group/repeatable relative pe-8 ${common.className}`}
       >
-        {nodeContent?.value && <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent.value}</span>}
+        {nodeContent?.value && <span ref={textEditRef as React.Ref<HTMLSpanElement>} contentEditable={canEditText} suppressContentEditableWarning onDoubleClick={startTextEditing} onBlur={(e: React.FocusEvent<HTMLElement>) => finishTextEditing(e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent.value}</span>}
         {children}
         {isEditable && <RepeatableItemActions nodeId={node.id} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} isMenuOpen={isRepeatableMenuOpen} setIsMenuOpen={setIsRepeatableMenuOpen} />}
       </li>
@@ -364,7 +386,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
     if (!nodeContent?.value) return null;
 
     return (
-      <Tag {...common} contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} style={{ ...nodeStyle, outline: "none" }}>
+      <Tag {...common} ref={textEditRef} contentEditable={canEditText} suppressContentEditableWarning onDoubleClick={startTextEditing} onBlur={(e: React.FocusEvent<HTMLElement>) => finishTextEditing(e.currentTarget.textContent ?? "")} style={{ ...nodeStyle, outline: "none" }}>
         {nodeContent.value}
       </Tag>
     );
