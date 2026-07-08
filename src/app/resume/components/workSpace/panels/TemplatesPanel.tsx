@@ -16,6 +16,12 @@ export default function TemplatesPanel() {
         { id: "REGULAR", label: "REGULAR", icon: "📄", count: templates.filter(t => t.category === "REGULAR").length },
     ];
 
+    const sourceCounts = {
+        OFFICIAL: templates.filter(t => t.visibility === "OFFICIAL").length,
+        COMMUNITY: templates.filter(t => t.visibility === "COMMUNITY").length,
+        PRIVATE: templates.filter(t => t.visibility === "PRIVATE").length,
+    };
+
     const getTemplatesBySource = (): ResumeTemplate[] => {
         if (activeSource === "OFFICIAL") return templates.filter(t => t.visibility === "OFFICIAL");
         if (activeSource === "COMMUNITY") return templates.filter(t => t.visibility === "COMMUNITY");
@@ -39,7 +45,7 @@ export default function TemplatesPanel() {
 
     return (
         <div className="space-y-6">
-            <TemplatesFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeSource={activeSource} setActiveSource={setActiveSource} categories={categories} getTemplatesBySource={getTemplatesBySource} />
+            <TemplatesFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeSource={activeSource} setActiveSource={setActiveSource} categories={categories} sourceCounts={sourceCounts} getTemplatesBySource={getTemplatesBySource} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
                 {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} views={template.views} downloads={template.downloads} likes={template.likes} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} onDelete={template.visibility === "PRIVATE" ? handleDeletePrivateTemplate : undefined} />)}
             </div>

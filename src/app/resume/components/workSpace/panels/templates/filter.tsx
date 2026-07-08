@@ -1,6 +1,7 @@
+import { ResumeTemplate } from "@/types/resume/ResumeTemplate";
 import { FiStar, FiUsers } from "react-icons/fi";
 import { RiGitRepositoryPrivateFill } from "react-icons/ri";
-export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCategory, setActiveCategory, activeSource, setActiveSource, categories, getTemplatesBySource }: {
+export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCategory, setActiveCategory, activeSource, setActiveSource, categories, sourceCounts, getTemplatesBySource }: {
     searchTerm: string;
     setSearchTerm: (term: string) => void;
     activeCategory: string;
@@ -8,7 +9,8 @@ export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCateg
     activeSource: "OFFICIAL" | "COMMUNITY" | "PRIVATE";
     setActiveSource: (source: "OFFICIAL" | "COMMUNITY" | "PRIVATE") => void;
     categories: { id: string; label: string; icon: React.ReactNode; count: number }[];
-    getTemplatesBySource: () => any[];
+    sourceCounts: Record<"OFFICIAL" | "COMMUNITY" | "PRIVATE", number>;
+    getTemplatesBySource: () => ResumeTemplate[];
 }) {
     const getCategoryCount = (categoryId: string) => {
         const templates = getTemplatesBySource();
@@ -44,6 +46,9 @@ export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCateg
                     >
                         {source.icon}
                         {source.label}
+                        <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-bold ${activeSource === source.id ? "bg-white/20 text-white" : "bg-gray-200 text-gray-700"}`}>
+                            {sourceCounts[source.id as keyof typeof sourceCounts]}
+                        </span>
                     </button>
                 ))}
             </div>
