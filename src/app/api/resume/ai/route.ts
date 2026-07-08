@@ -18,7 +18,7 @@ type AITool =
     | "ats-optimize"
     | "targeted-resume";
 
-const jsonInstruction = "Return ONLY valid JSON. Do not include markdown, code fences, or commentary outside JSON.";
+const jsonInstruction = "Return ONLY one valid JSON object. Do not include markdown, code fences, comments, trailing commas, or commentary outside JSON. Escape every double quote inside string values.";
 
 const prompts: Record<AITool, string> = {
     analyze: `${jsonInstruction}\nYou are a senior resume strategist. Analyze the resume against the job description. Return: {"score": number, "strengths": string[], "weaknesses": string[], "recommendations": string[]}. Be strict, practical, and professional.`,
@@ -35,13 +35,56 @@ const prompts: Record<AITool, string> = {
     "targeted-resume": `${jsonInstruction}\nCreate a targeted resume for the provided job description while preserving the candidate's truth and existing experience. Return: {"summary": string, "content": object, "suggestions": string[]}. The content object must preserve the original content keys and rewrite values to align with the job description and candidate skills.`,
 };
 
-function extractJson(text: string) {
+function stripJsonFence(text: string) {
+    return text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+}
+
+function extractFirstJsonObject(text: string) {
+    const cleanText = stripJsonFence(text);
+    const start = cleanText.indexOf("{");
+    if (start === -1) throw new Error("AI response did not contain a JSON object.");
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let index = start; index < cleanText.length; index += 1) {
+        const char = cleanText[index];
+
+        if (escaped) {
+            escaped = false;
+            continue;
+        }
+
+        if (char === "\\" && inString) {
+            escaped = true;
+            continue;
+        }
+
+        if (char === '"') {
+            inString = !inString;
+            continue;
+        }
+
+        if (inString) continue;
+
+        if (char === "{") depth += 1;
+        if (char === "}") depth -= 1;
+
+        if (depth === 0) return cleanText.slice(start, index + 1);
+    }
+
+    throw new Error("AI response contained an incomplete JSON object.");
+}
+
+function parseAiJson(text: string) {
+    const jsonText = extractFirstJsonObject(text);
+
     try {
-        return JSON.parse(text);
-    } catch {
-        const match = text.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("AI response did not contain valid JSON.");
-        return JSON.parse(match[0]);
+        return JSON.parse(jsonText);
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : "Unknown JSON parse error.";
+        throw new Error(`AI provider returned malformed JSON: ${detail}`);
     }
 }
 
@@ -95,6 +138,7 @@ export async function POST(request: NextRequest) {
                                 }),
                             },
                         ],
+                        response_format: { type: "json_object" },
                         max_tokens: 5000,
                     }),
                 });
@@ -107,7 +151,7 @@ export async function POST(request: NextRequest) {
                 const result = await response.json();
                 const message = result.choices?.[0]?.message?.content;
                 if (!message) return NextResponse.json({ error: "AI provider returned an empty response." }, { status: 502 });
-                return NextResponse.json(extractJson(message), { status: 200 });
+                return NextResponse.json(parseAiJson(message), { status: 200 });
             }
         }
     } catch (error) {
