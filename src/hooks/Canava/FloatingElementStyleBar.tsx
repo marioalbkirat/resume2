@@ -386,6 +386,14 @@ export default function FloatingElementStyleBar({ canvasRef }: FloatingElementSt
         <button type="button" className={`${buttonClass} ${current.textAlign === "right" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "right" })} title="Align right"><FiAlignRight /></button>
         {isRichTextElement && <button type="button" className={`${buttonClass} ${current.textAlign === "justify" ? activeButtonClass : ""}`} onClick={() => patch({ textAlign: "justify" })} title="Align justify"><FiAlignJustify /></button>}
         <ColorInput label="Text" value={current.color} onChange={(value) => patch({ color: value })} />
+        {selectedGroup === "icon" && <>
+          <DropdownPanel label="Margin">
+            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Margin ${field.label}`} value={current[`margin${field.key}`]} fallback={numberValue(current.margin, 0)} min={0} max={120} onChange={(value) => patch({ [`margin${field.key}`]: withPx(value) })} />)}
+          </DropdownPanel>
+          <DropdownPanel label="Padding">
+            {spacingFields.map((field) => <NumberStepper key={field.key} label={`Padding ${field.label}`} value={current[`padding${field.key}`]} fallback={numberValue(current.padding, 0)} min={0} max={120} onChange={(value) => patch({ [`padding${field.key}`]: withPx(value) })} />)}
+          </DropdownPanel>
+        </>}
         {isRichTextElement && <>
           <SelectControl label="Transform" value={current.textTransform} options={textTransformOptions} onChange={(value) => patch({ textTransform: value })} className="w-32" />
           <NumberStepper label="Line height" value={numberValue(current.lineHeight, 1.5) * 10} fallback={15} min={8} max={32} unit="" onChange={(value) => patch({ lineHeight: value / 10 })} />

@@ -87,12 +87,11 @@ type RepeatableItemActionsProps = {
   onDeleteListItem?: (nodeId: string) => void;
   onDuplicateListItem?: (nodeId: string) => void;
   onMoveListItem?: (nodeId: string, direction: "up" | "down") => void;
-  onSelectNode?: (nodeId: string) => void;
   isMenuOpen: boolean;
   setIsMenuOpen: (open: boolean | ((current: boolean) => boolean)) => void;
 };
 
-function RepeatableItemActions({ nodeId, parentId, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, onSelectNode, isMenuOpen, setIsMenuOpen }: RepeatableItemActionsProps) {
+function RepeatableItemActions({ nodeId, parentId, onAddListItem, onDeleteListItem, onDuplicateListItem, onMoveListItem, isMenuOpen, setIsMenuOpen }: RepeatableItemActionsProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,7 +113,7 @@ function RepeatableItemActions({ nodeId, parentId, onAddListItem, onDeleteListIt
     <div ref={menuRef} className="absolute top-0 z-20 print:hidden" style={{ right: "-20px" }}>
       <button
         type="button"
-        onClick={(event) => { event.stopPropagation(); setIsMenuOpen(open => !open); onSelectNode?.(nodeId); }}
+        onClick={(event) => { event.stopPropagation(); setIsMenuOpen(open => !open); }}
         className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/95 text-slate-600 opacity-100 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:opacity-0 md:group-hover/repeatable:opacity-100 md:group-focus-within/repeatable:opacity-100"
         aria-label="Open item actions"
         aria-expanded={isMenuOpen}
@@ -279,7 +278,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
           <>
             <button
               type="button"
-              onClick={(event) => { event.stopPropagation(); onSelectNode?.(node.id); setIsImageMenuOpen(open => !open); }}
+              onClick={(event) => { event.stopPropagation(); setIsImageMenuOpen(open => !open); }}
               className="absolute top-0 z-20 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/95 text-slate-600 opacity-100 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:opacity-0 md:group-hover/image:opacity-100 md:group-focus-within/image:opacity-100 print:hidden"
               style={{ right: "-20px" }}
               aria-label="Open image actions"
@@ -332,7 +331,7 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
         </a>
         {isEditable && (
           <>
-            <button type="button" onClick={(event) => { event.stopPropagation(); onSelectNode?.(node.id); setIsLinkMenuOpen(open => !open); }} className="absolute top-0 z-20 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/95 text-slate-600 opacity-100 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:opacity-0 md:group-hover/link:opacity-100 md:group-focus-within/link:opacity-100 print:hidden" style={{ right: "-20px" }} aria-label="Open link actions" aria-expanded={isLinkMenuOpen} title="Link actions"><FiMoreVertical size={16} aria-hidden /></button>
+            <button type="button" onClick={(event) => { event.stopPropagation(); setIsLinkMenuOpen(open => !open); }} className="absolute top-0 z-20 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-white/95 text-slate-600 opacity-100 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-slate-900 focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-blue-500 md:opacity-0 md:group-hover/link:opacity-100 md:group-focus-within/link:opacity-100 print:hidden" style={{ right: "-20px" }} aria-label="Open link actions" aria-expanded={isLinkMenuOpen} title="Link actions"><FiMoreVertical size={16} aria-hidden /></button>
             {isLinkMenuOpen && (
               <div className="absolute z-30 mt-1 min-w-32 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 text-sm text-slate-700 shadow-xl print:hidden" style={{ right: "-20px", top: "28px" }}>
                 <button type="button" onClick={(event) => { event.stopPropagation(); editLinkHref(); setIsLinkMenuOpen(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-start hover:bg-slate-50">Edit href</button>
@@ -352,14 +351,13 @@ export default function NodeRenderer({ node, sectionId, content = {}, isEditable
           isEditable ? (event: React.MouseEvent<HTMLElement>) => {
             event.preventDefault(); event.stopPropagation();
             setIsRepeatableMenuOpen(true);
-            onSelectNode?.(node.id);
           }
             : undefined}
         className={`group/repeatable relative pe-8 ${common.className}`}
       >
         {nodeContent?.value && <span contentEditable={isEditable} suppressContentEditableWarning onBlur={(e: React.FocusEvent<HTMLElement>) => onUpdate?.(key, e.currentTarget.textContent ?? "")} className="outline-none">{nodeContent.value}</span>}
         {children}
-        {isEditable && <RepeatableItemActions nodeId={node.id} parentId={node.parentId} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} onSelectNode={onSelectNode} isMenuOpen={isRepeatableMenuOpen} setIsMenuOpen={setIsRepeatableMenuOpen} />}
+        {isEditable && <RepeatableItemActions nodeId={node.id} parentId={node.parentId} onAddListItem={onAddListItem} onDeleteListItem={onDeleteListItem} onDuplicateListItem={onDuplicateListItem} onMoveListItem={onMoveListItem} isMenuOpen={isRepeatableMenuOpen} setIsMenuOpen={setIsRepeatableMenuOpen} />}
       </li>
     );
   }
