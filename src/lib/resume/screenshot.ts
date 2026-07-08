@@ -8,15 +8,24 @@ export const captureResumePreview = async (url: string, basename: string) => {
     const filename = `${basename}-${Date.now()}.png`.replace(/[^a-zA-Z0-9.-]/g, "-");
     const filePath = path.join(uploadDir, filename);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1200, height: 1600, deviceScaleFactor: 1 });
-    await page.goto(url, { waitUntil: "networkidle0" });
-    const resume = await page.$("#resume");
-    if (resume) {
-        await resume.screenshot({ path: filePath });
-    } else {
-        await page.screenshot({ path: filePath, fullPage: true });
+
+    try {
+        const page = await browser.newPage();
+        await page.setViewport({ width: 1400, height: 1800, deviceScaleFactor: 2 });
+        await page.goto(url, { waitUntil: "networkidle0" });
+        await page.evaluateHandle("document.fonts.ready");
+
+        const firstResumePage = await page.$('[data-resume-page="1"]');
+        const resume = firstResumePage ?? await page.$("#resume");
+
+        if (resume) {
+            await resume.screenshot({ path: filePath, omitBackground: false });
+        } else {
+            await page.screenshot({ path: filePath, fullPage: false, omitBackground: false });
+        }
+    } finally {
+        await browser.close();
     }
-    await browser.close();
+
     return `/user-resumes/${filename}`;
 };
