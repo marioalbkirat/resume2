@@ -77,14 +77,93 @@ function extractFirstJsonObject(text: string) {
     throw new Error("AI response contained an incomplete JSON object.");
 }
 
+function looksLikeStringTerminator(text: string, quoteIndex: number) {
+    for (let index = quoteIndex + 1; index < text.length; index += 1) {
+        const char = text[index];
+        if (/\s/.test(char)) continue;
+        return char === "," || char === "}" || char === "]" || char === ":";
+    }
+
+    return true;
+}
+
+function repairUnescapedJsonStringQuotes(text: string) {
+    let repaired = "";
+    let inString = false;
+    let escaped = false;
+
+    for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+
+        if (escaped) {
+            repaired += char;
+            escaped = false;
+            continue;
+        }
+
+        if (char === "\\" && inString) {
+            repaired += char;
+            escaped = true;
+            continue;
+        }
+
+        if (inString) {
+            if (char === "\n") {
+                repaired += "\\n";
+                continue;
+            }
+
+            if (char === "\r") {
+                repaired += "\\r";
+                continue;
+            }
+
+            if (char === "\t") {
+                repaired += "\\t";
+                continue;
+            }
+        }
+
+        if (char === '"') {
+            if (!inString) {
+                inString = true;
+                repaired += char;
+                continue;
+            }
+
+            if (looksLikeStringTerminator(text, index)) {
+                inString = false;
+                repaired += char;
+            } else {
+                repaired += '\\"';
+            }
+            continue;
+        }
+
+        repaired += char;
+    }
+
+    return repaired;
+}
+
+function sanitizeJsonTextForParse(text: string) {
+    return repairUnescapedJsonStringQuotes(text).replace(/,\s*([}\]])/g, "$1");
+}
+
 function parseAiJson(text: string) {
     const jsonText = extractFirstJsonObject(text);
 
     try {
         return JSON.parse(jsonText);
     } catch (error) {
-        const detail = error instanceof Error ? error.message : "Unknown JSON parse error.";
-        throw new Error(`AI provider returned malformed JSON: ${detail}`);
+        const repairedJsonText = sanitizeJsonTextForParse(jsonText);
+
+        try {
+            return JSON.parse(repairedJsonText);
+        } catch {
+            const detail = error instanceof Error ? error.message : "Unknown JSON parse error.";
+            throw new Error(`AI provider returned malformed JSON: ${detail}`);
+        }
     }
 }
 
