@@ -65,31 +65,74 @@ export async function POST(request: NextRequest) {
     }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const templates = await prisma.resumeTemplate.findMany({
-            orderBy: { createdAt: 'desc' },
-            select: {
-                id: true,
-                name: true,
-                description: true,
-                previewImage: true,
-                visibility: true,
-                downloads: true,
-                likes: true,
-                settings: true,
-                distribution: true,
-                style: true,
-                content: true,
-                authorId: true,
-                forks: true,
-                category: true,
-                templateLikes: { where: { userId: 'cmqzvcgn80000t9x89yni4fg9' }, select: { userId: true } },
-                createdAt: true
-            }
-        });
+        const isDashboard = request.nextUrl.searchParams.get('dashboard') === '1';
 
-        return NextResponse.json(templates.map(({ templateLikes, ...template }: { templateLikes: { userId: string }[]; [key: string]: unknown }) => ({ ...template, isLiked: templateLikes.length > 0 })));
+        if (!isDashboard) {
+            const templates = await prisma.resumeTemplate.findMany({
+                orderBy: { createdAt: 'desc' },
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    previewImage: true,
+                    visibility: true,
+                    downloads: true,
+                    likes: true,
+                    settings: true,
+                    distribution: true,
+                    style: true,
+                    content: true,
+                    authorId: true,
+                    forks: true,
+                    category: true,
+                    templateLikes: { where: { userId: 'cmqzvcgn80000t9x89yni4fg9' }, select: { userId: true } },
+                    createdAt: true,
+                },
+            });
+
+            return NextResponse.json(templates.map(({ templateLikes, ...template }: { templateLikes: { userId: string }[]; [key: string]: unknown }) => ({ ...template, isLiked: templateLikes.length > 0 })));
+        }
+        const [templates, totals, draftCount] = await Promise.all([
+            prisma.resumeTemplate.findMany({
+                orderBy: { createdAt: 'desc' },
+                include: {
+                    user: { select: { id: true, name: true, email: true, isAdmin: true } },
+                    templateLikes: { include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' } },
+                    templateDownloads: { include: { user: { select: { id: true, name: true, email: true, resumeUserAnalyses: { select: { visitsCount: true, downloadsCount: true } } } } }, orderBy: { createdAt: 'desc' } },
+                    templateForks: { include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'desc' } },
+                    drafts: {
+                        orderBy: { createdAt: 'desc' },
+                        select: {
+                            id: true,
+                            userId: true,
+                            title: true,
+                            previewImage: true,
+                            isDownloaded: true,
+                            isLinkedWithPortfolio: true,
+                            slug: true,
+                            createdAt: true,
+                            updatedAt: true,
+                            user: { select: { id: true, name: true, email: true, resumeUserAnalyses: { select: { visitsCount: true, downloadsCount: true } } } },
+                        },
+                    },
+                    _count: { select: { drafts: true } },
+                },
+            }),
+            prisma.resumeTemplate.aggregate({ _sum: { downloads: true, likes: true, forks: true } }),
+            prisma.resumeDraft.count(),
+        ]);
+
+        return NextResponse.json({
+            stats: {
+                downloads: totals._sum.downloads || 0,
+                likes: totals._sum.likes || 0,
+                forks: totals._sum.forks || 0,
+                resumeDrafts: draftCount,
+            },
+            templates,
+        });
     } catch (error) {
         console.error('Error fetching templates:', error);
         return NextResponse.json({ error: 'Failed to fetch templates' }, { status: 500 });
