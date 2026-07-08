@@ -1,69 +1,116 @@
 import { NextRequest, NextResponse } from "next/server";
+
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+const MODEL = "cohere/north-mini-code:free";
+
+type AITool =
+    | "analyze"
+    | "match-score"
+    | "keywords"
+    | "coverletter"
+    | "summary"
+    | "translation"
+    | "design-resume"
+    | "optimize"
+    | "rewrite"
+    | "skills"
+    | "ats-optimize"
+    | "targeted-resume";
+
+const jsonInstruction = "Return ONLY valid JSON. Do not include markdown, code fences, or commentary outside JSON.";
+
+const prompts: Record<AITool, string> = {
+    analyze: `${jsonInstruction}\nYou are a senior resume strategist. Analyze the resume against the job description. Return: {"score": number, "strengths": string[], "weaknesses": string[], "recommendations": string[]}. Be strict, practical, and professional.`,
+    "match-score": `${jsonInstruction}\nYou are an ATS scoring engine. Return: {"score": number, "summary": string, "details": string[], "missingKeywords": string[], "recommendations": string[]}. Score must be 0-100 and realistic.`,
+    keywords: `${jsonInstruction}\nExtract high-value ATS keywords from the job description. Return: {"summary": string, "keywords": string[], "hardSkills": string[], "softSkills": string[], "priorityKeywords": string[]}. Explain how to use them naturally.`,
+    coverletter: `${jsonInstruction}\nWrite a polished, tailored cover letter. Return: {"content": string}. Keep it specific, confident, and professional.`,
+    summary: `${jsonInstruction}\nCreate a powerful professional resume summary based on the resume and target role. Return: {"content": string}.`,
+    translation: `${jsonInstruction}\nTranslate the provided resume content into the requested target language while preserving professional resume tone, names, dates, structure, and meaning. Return: {"content": string}.`,
+    "design-resume": `${jsonInstruction}\nYou are an expert resume visual designer. Return a complete valid style object matching exactly: {"style":{"global":{},"selectors":{},"elements":{},"customCSS":""},"explanation":string}. Use professional, ATS-readable CSS property names with string or number values only.`,
+    optimize: `${jsonInstruction}\nRewrite and optimize the full resume content. Return: {"summary": string, "content": object, "changes": string[]}. The content object must preserve the original content keys and update values into complete, polished, truthful, ATS-friendly resume text.`,
+    rewrite: `${jsonInstruction}\nRewrite the provided bullet or text into stronger resume bullets. Return: {"content": string, "alternatives": string[]}. Use action verbs, metrics where reasonable, and executive-quality phrasing.`,
+    skills: `${jsonInstruction}\nSuggest skills using only the skills section plus optional target role/job description. Return: {"summary": string, "skills": string[], "prioritySkills": string[]}. Do not rewrite the full resume.`,
+    "ats-optimize": `${jsonInstruction}\nAudit ATS readiness. Return: {"score": number, "summary": string, "issues": string[], "recommendations": string[], "keywordPlan": string[]}. Do not rewrite the resume.`,
+    "targeted-resume": `${jsonInstruction}\nCreate a targeted resume for the provided job description while preserving the candidate's truth and existing experience. Return: {"summary": string, "content": object, "suggestions": string[]}. The content object must preserve the original content keys and rewrite values to align with the job description and candidate skills.`,
+};
+
+function extractJson(text: string) {
+    try {
+        return JSON.parse(text);
+    } catch {
+        const match = text.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error("AI response did not contain valid JSON.");
+        return JSON.parse(match[0]);
+    }
+}
+
 export async function POST(request: NextRequest) {
     try {
-        const { tool, jobDescription, content } = await request.json();
-        switch (tool) {
+        const { tool, jobDescription = "", content = {}, selectedText = "", skillArea = "", targetLanguage = "English", styleSchema } = await request.json();
+
+        if (!OPENROUTER_API_KEY) {
+            return NextResponse.json({ error: "OPENROUTER_API_KEY is not configured." }, { status: 500 });
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(prompts, tool)) {
+            return NextResponse.json({ error: "Unsupported AI tool." }, { status: 400 });
+        }
+
+        switch (tool as AITool) {
             case "analyze":
+            case "match-score":
+            case "keywords":
+            case "coverletter":
+            case "summary":
+            case "translation":
+            case "design-resume":
+            case "optimize":
+            case "rewrite":
+            case "skills":
+            case "ats-optimize":
+            case "targeted-resume": {
                 const response = await fetch(OPENROUTER_API_URL, {
-                    method: 'POST',
+                    method: "POST",
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                        'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-                        'X-Title': 'analyze resume',
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+                        "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+                        "X-Title": `resume-ai-${tool}`,
                     },
                     body: JSON.stringify({
-                        model: 'cohere/north-mini-code:free',
+                        model: MODEL,
                         messages: [
+                            { role: "system", content: prompts[tool as AITool] },
                             {
-                                role: 'system',
-                                content: `
-                                You are an AI assistant specialized in resume screening.
-
-                                You must analyze a resume against a job description.
-
-                                Return ONLY valid JSON. Do NOT return any text before or after JSON.
-
-                                The output must follow exactly this format:
-
-                                {
-                                "score": number,
-                                "strengths": string[],
-                                "weaknesses": string[],
-                                "recommendations": string[]
-                                }
-
-                                Rules:
-                                - score must be between 0 and 100
-                                - be strict and realistic
-                                - strengths = what matches job well
-                                - weaknesses = what is missing or weak
-                                - recommendations = actionable improvements
-                                - do NOT include explanations or extra text
-                                `.trim(),
-                            },
-                            {
-                                role: 'user',
-                                content: `JOB DESCRIPTION:\n${jobDescription}\n\nRESUME:\n${JSON.stringify(content, null, 2)}`
+                                role: "user",
+                                content: JSON.stringify({
+                                    tool,
+                                    jobDescription,
+                                    resumeContent: content,
+                                    selectedText,
+                                    skillArea,
+                                    targetLanguage,
+                                    styleSchema,
+                                }),
                             },
                         ],
                         max_tokens: 5000,
                     }),
                 });
-                if (response.ok) {
-                    const result = await response.json();
-                    const result2 = JSON.parse(result.choices[0].message.content);
-                    return NextResponse.json(result2, { status: 200 });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    return NextResponse.json({ error: "AI provider request failed.", details: errorText }, { status: response.status });
                 }
-                break;
-            case "coverletter":
-                break;
-            default:
-                break;
+
+                const result = await response.json();
+                const message = result.choices?.[0]?.message?.content;
+                if (!message) return NextResponse.json({ error: "AI provider returned an empty response." }, { status: 502 });
+                return NextResponse.json(extractJson(message), { status: 200 });
+            }
         }
     } catch (error) {
-        return NextResponse.json(error, { status: 400 });
+        return NextResponse.json({ error: error instanceof Error ? error.message : "Unexpected AI route error." }, { status: 400 });
     }
 }
