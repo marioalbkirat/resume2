@@ -39,24 +39,24 @@ export default function ResumeWorkSpace() {
         }
     };
     return (
-        <div className={`relative min-h-screen bg-linear-to-br from-gray-50 to-gray-100 transition-all duration-300 ${isWorkspaceOpen ? "" : "w-14 overflow-visible"}`}>
+        <div className={`relative min-h-[55vh] rounded-2xl bg-linear-to-br from-gray-50 to-gray-100 transition-all duration-300 lg:min-h-screen lg:rounded-none ${isWorkspaceOpen ? "" : "h-16 min-h-16 overflow-visible lg:h-auto lg:w-14 lg:min-h-screen"}`}>
             <button
                 type="button"
                 onClick={() => setIsWorkspaceOpen((current) => !current)}
                 aria-label={isWorkspaceOpen ? "Close resume workspace" : "Open resume workspace"}
                 title={isWorkspaceOpen ? "Close workspace" : "Open workspace"}
-                className="absolute right-0 top-6 z-20 flex h-11 w-11 translate-x-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
+                className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition hover:bg-blue-50 hover:text-blue-600 cursor-pointer lg:right-0 lg:top-6 lg:h-11 lg:w-11 lg:translate-x-1/2"
             >
                 {isWorkspaceOpen ? <FiChevronLeft className="h-6 w-6" /> : <FiChevronRight className="h-6 w-6" />}
             </button>
             {isWorkspaceOpen && (
-                <div className="max-w-7xl mx-auto px-4 py-8">
-                    <div className="flex flex-wrap gap-2 mb-8 bg-white rounded-xl p-1 shadow-sm pr-8">
+                <div className="mx-auto max-w-7xl px-3 py-5 sm:px-4 lg:py-8">
+                    <div className="mb-5 flex gap-2 overflow-x-auto rounded-xl bg-white p-1 pr-14 shadow-sm sm:flex-wrap lg:mb-8 lg:pr-8">
                         {tabs.map((tab) => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`flex items-center gap-2 px-3 py-3 rounded-lg font-medium transition-all cursor-pointer ${
+                                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-3 text-sm font-medium transition-all cursor-pointer sm:text-base ${
                                     activeTab === tab.id
                                         ? "bg-blue-600 text-white shadow-md"
                                         : "text-gray-600 hover:bg-gray-100"

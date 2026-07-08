@@ -92,7 +92,7 @@ export default function Canava() {
   }, [selectedNodeId, setSelectedNodeIds]);
 
   return (
-    <div ref={canvasRef} className="relative">
+    <div ref={canvasRef} className="resume-canvas-shell relative origin-top">
       {style.customCSS && <style>{style.customCSS}</style>}
       <FloatingElementStyleBar canvasRef={canvasRef} />
       <BuildLayout sections={sections} settings={settings} distribution={distribution} content={content} mode={mode} selectedNodeId={selectedNodeId} selectedNodeIds={selectedNodeIds} onNodeSelect={selectNode} onNodeUpdate={updateContent} onListItemAdd={addListItem} onListItemDelete={deleteListItem} onListItemDuplicate={duplicateListItem} onListItemMove={moveListItem} style={style} pageCount={pageCount} />
