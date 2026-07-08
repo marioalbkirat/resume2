@@ -15,7 +15,8 @@ interface BuildLayoutProps {
   content?: Record<string, Content>;
   mode: "preview" | "edit";
   selectedNodeId?: string | null;
-  onNodeSelect?: (nodeId: string) => void;
+  selectedNodeIds?: string[];
+  onNodeSelect?: (nodeId: string, event?: React.MouseEvent<HTMLElement>) => void;
   onNodeUpdate?: (sectionId: string, nodeId: string, value: string, props?: Record<string, string>) => void;
   onListItemAdd?: (sectionId: string, listNodeId: string) => void;
   onListItemDelete?: (sectionId: string, listItemId: string) => void;
@@ -75,7 +76,7 @@ const getColumnWidths = (globalStyle: ResumeStyle["global"] | undefined, pageSiz
   };
 };
 
-export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, onListItemDuplicate, onListItemMove, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
+export default function BuildLayout({ sections, settings, distribution, content = {}, mode, selectedNodeId, selectedNodeIds = [], onNodeSelect, onNodeUpdate, onListItemAdd, onListItemDelete, onListItemDuplicate, onListItemMove, style, pageCount = 1, exportMode = false }: BuildLayoutProps) {
   const isEditable = mode === "edit";
   const measuredFlowRef = useRef<HTMLDivElement>(null);
   const [measuredPageCount, setMeasuredPageCount] = useState(pageCount);
@@ -126,6 +127,7 @@ export default function BuildLayout({ sections, settings, distribution, content 
         content={content}
         isEditable={isEditable}
         selectedNodeId={selectedNodeId}
+        selectedNodeIds={selectedNodeIds}
         showIcons={settings.showIcons}
         showSectionIcons={config?.showIcon ?? true}
         direction={settings.direction}
