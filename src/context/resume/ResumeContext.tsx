@@ -3,7 +3,7 @@
 import { Distribution } from "@/types/resume/Distribution";
 import { ResumeTemplate } from "@/types/resume/ResumeTemplate";
 import { Draft } from "@/types/resume/Draft";
-import { ResumeStyle } from "@/types/resume/ResumeStyle";
+import { ResumeStyle, StyleObject } from "@/types/resume/ResumeStyle";
 import { Schema, Section } from "@/types/resume/Section";
 import { Settings } from "@/types/resume/Settings";
 import { Content } from "@/types/resume/Content";
@@ -65,13 +65,16 @@ const templateContent = (template: ResumeTemplate) => ({ ...(template.content ??
 const contentKeyFor = (node: Schema) => node.id;
 const makeNodeId = () => `node-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-const cloneListItem = (node: Schema, parentId: string | undefined, content: Record<string, Content>) => {
+const cloneListItem = (node: Schema, parentId: string | undefined, content: Record<string, Content>, style: ResumeStyle) => {
     const nextContent: Record<string, Content> = {};
+    const nextElementStyles: Record<string, StyleObject> = {};
     const cloneNode = (current: Schema, nextParentId: string | undefined): Schema => {
         const nextId = makeNodeId();
         const sourceKey = contentKeyFor(current);
         const sourceContent = content[sourceKey];
+        const sourceElementStyle = style.elements[sourceKey];
         if (sourceContent) nextContent[nextId] = { ...sourceContent, id: nextId };
+        if (sourceElementStyle) nextElementStyles[nextId] = { ...sourceElementStyle };
         return {
             ...current,
             id: nextId,
@@ -80,7 +83,7 @@ const cloneListItem = (node: Schema, parentId: string | undefined, content: Reco
         };
     };
 
-    return { node: cloneNode(node, parentId), content: nextContent };
+    return { node: cloneNode(node, parentId), content: nextContent, elementStyles: nextElementStyles };
 };
 
 const removeContentForNode = (node: Schema, nextContent: Record<string, Content>) => {
@@ -206,6 +209,7 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
 
     const addListItem = useCallback((sectionId: string, listNodeId: string) => {
         let clonedContent: Record<string, Content> = {};
+        let clonedElementStyles: Record<string, StyleObject> = {};
         const nextSections = sections.map(section => {
             if (section.id !== sectionId) return section;
 
@@ -213,8 +217,9 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
                 if (node.id === listNodeId && (node.tag === "ul" || node.tag === "ol")) {
                     const firstItem = (node.children ?? []).find(child => child.tag === "li");
                     if (!firstItem) return node;
-                    const cloned = cloneListItem(firstItem, node.id, content);
+                    const cloned = cloneListItem(firstItem, node.id, content, style);
                     clonedContent = { ...clonedContent, ...cloned.content };
+                    clonedElementStyles = { ...clonedElementStyles, ...cloned.elementStyles };
                     return { ...node, children: [...(node.children ?? []), cloned.node] };
                 }
                 return { ...node, children: (node.children ?? []).map(appendToList) };
@@ -226,7 +231,10 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
         if (!Object.keys(clonedContent).length) return;
         setSections(nextSections);
         setContent(prev => ({ ...prev, ...clonedContent }));
-    }, [content, sections]);
+        if (Object.keys(clonedElementStyles).length) {
+            setStyle(prev => ({ ...prev, elements: { ...prev.elements, ...clonedElementStyles } }));
+        }
+    }, [content, sections, style]);
 
     const deleteListItem = useCallback((sectionId: string, listItemId: string) => {
         const removedNodes: Schema[] = [];
@@ -256,7 +264,9 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
     }, [sections]);
 
     const duplicateListItem = useCallback((sectionId: string, listItemId: string) => {
+        let didDuplicate = false;
         let clonedContent: Record<string, Content> = {};
+        let clonedElementStyles: Record<string, StyleObject> = {};
         const nextSections = sections.map(section => {
             if (section.id !== sectionId) return section;
 
@@ -265,8 +275,10 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
                 const targetIndex = children.findIndex(child => child.id === listItemId && child.tag === "li");
                 if (targetIndex >= 0) {
                     const target = children[targetIndex];
-                    const cloned = cloneListItem(target, node.id, content);
+                    const cloned = cloneListItem(target, node.id, content, style);
+                    didDuplicate = true;
                     clonedContent = { ...clonedContent, ...cloned.content };
+                    clonedElementStyles = { ...clonedElementStyles, ...cloned.elementStyles };
                     return { ...node, children: [...children.slice(0, targetIndex + 1), cloned.node, ...children.slice(targetIndex + 1)] };
                 }
                 return { ...node, children: children.map(duplicateNode) };
@@ -275,10 +287,13 @@ export function ResumeBuilderProvider({ children }: ProviderProps) {
             return { ...section, schema: duplicateNode(section.schema) };
         });
 
-        if (!Object.keys(clonedContent).length) return;
+        if (!didDuplicate) return;
         setSections(nextSections);
-        setContent(prev => ({ ...prev, ...clonedContent }));
-    }, [content, sections]);
+        if (Object.keys(clonedContent).length) setContent(prev => ({ ...prev, ...clonedContent }));
+        if (Object.keys(clonedElementStyles).length) {
+            setStyle(prev => ({ ...prev, elements: { ...prev.elements, ...clonedElementStyles } }));
+        }
+    }, [content, sections, style]);
 
     const moveListItem = useCallback((sectionId: string, listItemId: string, direction: "up" | "down") => {
         let didMove = false;
