@@ -54,7 +54,7 @@ export default function TemplatesPanel() {
         <div className="space-y-6">
             <TemplatesFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeSource={activeSource} setActiveSource={setActiveSource} categories={categories} sourceCounts={sourceCounts} getTemplatesBySource={getTemplatesBySource} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} forks={template.forks} downloads={template.downloads} likes={template.likes} isLiked={template.isLiked} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} onLike={handleToggleLike} onDelete={template.visibility === "PRIVATE" ? handleDeletePrivateTemplate : undefined} />)}
+                {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} forks={template.forks} downloads={template.downloads} likes={template.likes} isLiked={template.isLiked} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorName : undefined} onClick={handleSelectTemplate} onLike={handleToggleLike} onDelete={template.visibility === "PRIVATE" ? handleDeletePrivateTemplate : undefined} />)}
             </div>
         </div>
     );

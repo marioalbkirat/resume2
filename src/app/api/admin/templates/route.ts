@@ -85,14 +85,16 @@ export async function GET(request: NextRequest) {
                     style: true,
                     content: true,
                     authorId: true,
+                    communityRequested: true,
                     forks: true,
+                    user: { select: { name: true } },
                     category: true,
                     templateLikes: { where: { userId: 'cmqzvcgn80000t9x89yni4fg9' }, select: { userId: true } },
                     createdAt: true,
                 },
             });
 
-            return NextResponse.json(templates.map(({ templateLikes, ...template }: { templateLikes: { userId: string }[]; [key: string]: unknown }) => ({ ...template, isLiked: templateLikes.length > 0 })));
+            return NextResponse.json(templates.map(({ templateLikes, user, ...template }: { templateLikes: { userId: string }[]; user?: { name: string | null }; [key: string]: unknown }) => ({ ...template, authorName: user?.name ?? "Unknown user", isLiked: templateLikes.length > 0 })));
         }
         const [templates, totals, draftCount] = await Promise.all([
             prisma.resumeTemplate.findMany({

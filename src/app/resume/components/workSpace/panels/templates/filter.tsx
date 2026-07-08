@@ -30,7 +30,7 @@ export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCateg
                     />
                 </div>
             </div>
-            <div className="mb-6 flex gap-2 overflow-x-auto border-b border-gray-200">
+            <div className="mb-6 flex flex-wrap gap-2 border-b border-gray-200">
                 {[
                     { id: "OFFICIAL", label: "Official Gallery", icon: <FiStar className="w-3 h-4" /> },
                     { id: "COMMUNITY", label: "Community Templates", icon: <FiUsers className="w-3 h-4" /> },
@@ -39,7 +39,7 @@ export default function TemplatesFilter({ searchTerm, setSearchTerm, activeCateg
                     <button
                         key={source.id}
                         onClick={() => setActiveSource(source.id as typeof activeSource)}
-                        className={`flex shrink-0 items-center gap-2 rounded-t-lg px-3 py-3 text-sm font-medium transition-all cursor-pointer sm:text-base ${activeSource === source.id
+                        className={`flex items-center gap-2 rounded-t-lg px-3 py-3 text-sm font-medium transition-all cursor-pointer sm:text-base ${activeSource === source.id
                             ? "bg-blue-600 text-white"
                             : "text-gray-600 hover:bg-gray-100"
                             }`}
