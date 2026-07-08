@@ -1,8 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
+import { CheckCircleIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 type CommunityTemplateRequest = {
     id: string;
@@ -21,6 +23,7 @@ export default function CommunityTemplateRequestsPage() {
     const [templates, setTemplates] = useState<CommunityTemplateRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [approvingId, setApprovingId] = useState<string | null>(null);
+    const router = useRouter();
 
     useEffect(() => {
         let active = true;
@@ -31,6 +34,10 @@ export default function CommunityTemplateRequestsPage() {
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
     }, []);
+
+    const handleView = (id: string) => {
+        router.push(`/resume/template/${id}`);
+    };
 
     const approveTemplate = async (template: CommunityTemplateRequest) => {
         const result = await Swal.fire({
@@ -67,29 +74,37 @@ export default function CommunityTemplateRequestsPage() {
                 <p className="mt-2 text-gray-600">Review templates users requested to publish before making them visible to the community.</p>
             </div>
             {loading ? <div className="rounded-lg border bg-white p-6 text-gray-500">Loading requests...</div> : templates.length === 0 ? <div className="rounded-lg border bg-white p-6 text-gray-500">No pending community template requests.</div> : (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-                    {templates.map(template => (
-                        <article key={template.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                            <div className="relative aspect-3/4 bg-gray-100">
-                                {template.previewImage ? <Image src={template.previewImage} alt={template.name} fill className="object-cover" /> : <div className="flex h-full items-center justify-center text-gray-400">No preview</div>}
-                            </div>
-                            <div className="space-y-3 p-4">
-                                <div>
-                                    <h2 className="text-lg font-bold text-gray-900">{template.name}</h2>
-                                    <p className="text-sm text-gray-500">By {template.user?.name || 'Unknown user'}{template.user?.email ? ` (${template.user.email})` : ''}</p>
-                                </div>
-                                <p className="line-clamp-3 text-sm text-gray-600">{template.description}</p>
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                    <span className="rounded-full bg-blue-100 px-2 py-1 font-semibold text-blue-800">{template.category}</span>
-                                    <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-800">Requested {formatDate(template.createdAt)}</span>
-                                    {template.targetRoles.map(role => <span key={role} className="rounded-full bg-gray-100 px-2 py-1 text-gray-700">{role}</span>)}
-                                </div>
-                                <button onClick={() => approveTemplate(template)} disabled={approvingId === template.id} className="w-full rounded-lg bg-green-600 px-4 py-2 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-green-300">
-                                    {approvingId === template.id ? 'Approving...' : 'Approve as Community'}
-                                </button>
-                            </div>
-                        </article>
-                    ))}
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-slate-200">
+                            <thead className="bg-slate-100">
+                                <tr>{['Name', 'Preview image', 'Category', 'Target roles', 'Description', 'By user name', 'Created at', 'Actions'].map(head => <th key={head} className="px-5 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-600">{head}</th>)}</tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {templates.map(template => (
+                                    <tr key={template.id} className="transition hover:bg-blue-50/50">
+                                        <td className="px-5 py-4 text-sm font-semibold text-slate-950">{template.name}</td>
+                                        <td className="px-5 py-4">
+                                            <div className="relative h-24 w-18 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                                                {template.previewImage ? <Image src={template.previewImage} alt={template.name} fill className="object-cover" sizes="72px" /> : <div className="flex h-full items-center justify-center px-2 text-center text-xs text-slate-400">No preview</div>}
+                                            </div>
+                                        </td>
+                                        <td className="px-5 py-4"><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-800">{template.category}</span></td>
+                                        <td className="px-5 py-4 text-sm text-slate-600"><div className="flex min-w-48 flex-wrap gap-1">{template.targetRoles.length ? template.targetRoles.map(role => <span key={role} className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700">{role}</span>) : <span>No roles</span>}</div></td>
+                                        <td className="max-w-sm px-5 py-4 text-sm text-slate-600"><p className="line-clamp-3">{template.description}</p></td>
+                                        <td className="px-5 py-4 text-sm text-slate-600"><div className="font-semibold text-slate-900">{template.user?.name || 'Unknown user'}</div>{template.user?.email && <div className="text-xs text-slate-500">{template.user.email}</div>}</td>
+                                        <td className="px-5 py-4 text-sm text-slate-600">{formatDate(template.createdAt)}</td>
+                                        <td className="px-5 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <button onClick={() => handleView(template.id)} className="text-blue-600 transition hover:text-blue-900" title="View"><EyeIcon className="h-5 w-5" /></button>
+                                                <button onClick={() => approveTemplate(template)} disabled={approvingId === template.id} className="text-emerald-600 transition hover:text-emerald-900 disabled:cursor-not-allowed disabled:text-emerald-300" title="Approve as Community"><CheckCircleIcon className="h-5 w-5" /></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
         </div>
