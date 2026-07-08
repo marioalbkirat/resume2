@@ -2,6 +2,8 @@ import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { captureResumePreview } from "@/lib/resume/screenshot";
 
+type PrismaTransactionClient = Omit<typeof prisma, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+
 const DEMO_USER_ID = "cmqzvcgn80000t9x89yni4fg9";
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "resume";
 
@@ -23,17 +25,25 @@ export async function POST(request: NextRequest) {
         const { title, templateId, content, schema, settings, distribution, style } = body;
         if (!title || !templateId) return NextResponse.json({ error: "title and templateId are required" }, { status: 400 });
 
-        const createdDraft = await prisma.resumeDraft.create({
-            data: {
-                title,
-                userId: DEMO_USER_ID,
-                templateId,
-                content: content ?? {},
-                schema: schema ?? {},
-                settings: settings ?? {},
-                distribution: distribution ?? {},
-                style: style ?? {},
-            },
+        const createdDraft = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
+            const draft = await tx.resumeDraft.create({
+                data: {
+                    title,
+                    userId: DEMO_USER_ID,
+                    templateId,
+                    content: content ?? {},
+                    schema: schema ?? {},
+                    settings: settings ?? {},
+                    distribution: distribution ?? {},
+                    style: style ?? {},
+                },
+            });
+            const existingFork = await tx.templateFork.findUnique({ where: { userId_templateId: { userId: DEMO_USER_ID, templateId } } });
+            if (!existingFork) {
+                await tx.templateFork.create({ data: { userId: DEMO_USER_ID, templateId } });
+                await tx.resumeTemplate.update({ where: { id: templateId }, data: { forks: { increment: 1 } } });
+            }
+            return draft;
         });
         let draft = createdDraft;
         try {
@@ -58,9 +68,14 @@ export async function PATCH(request: NextRequest) {
         const existing = await prisma.resumeDraft.findFirst({ where: { id, userId: DEMO_USER_ID } });
         if (!existing) return NextResponse.json({ error: "Draft not found" }, { status: 404 });
 
+        if (action === "toggle-pin") {
+            const draft = await prisma.resumeDraft.update({ where: { id }, data: { isPinned: !existing.isPinned } });
+            return NextResponse.json(draft);
+        }
+
         if (action === "activate") {
             const nextSlug = existing.slug ?? `${slugify(existing.title)}-${existing.id.slice(-6)}`;
-            const draft = await prisma.$transaction(async (tx: typeof prisma) => {
+            const draft = await prisma.$transaction(async (tx: PrismaTransactionClient) => {
                 await tx.resumeDraft.updateMany({ where: { userId: DEMO_USER_ID, id: { not: existing.id }, slug: { not: null } }, data: { slug: null } });
                 return tx.resumeDraft.update({ where: { id }, data: { slug: nextSlug } });
             });

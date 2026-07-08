@@ -5,7 +5,7 @@ import { useResumeBuilder } from "@/context/resume/ResumeContext";
 import { ResumeTemplate } from "@/types/resume/ResumeTemplate";
 
 export default function TemplatesPanel() {
-    const { templates, selectedResume, activateTemplate, deletePrivateTemplate } = useResumeBuilder();
+    const { templates, selectedResume, activateTemplate, deletePrivateTemplate, setTemplates } = useResumeBuilder();
     const [searchTerm, setSearchTerm] = useState("");
     const [activeCategory, setActiveCategory] = useState<string>("all");
     const [activeSource, setActiveSource] = useState<"OFFICIAL" | "COMMUNITY" | "PRIVATE">("OFFICIAL");
@@ -35,6 +35,13 @@ export default function TemplatesPanel() {
         if (temp) activateTemplate(temp);
     };
 
+    const handleToggleLike = async (id: string) => {
+        const response = await fetch("/api/resume/template-like", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ templateId: id }) });
+        if (!response.ok) return;
+        const result = await response.json() as { id: string; likes: number; isLiked: boolean };
+        setTemplates(previous => previous.map(template => template.id === result.id ? { ...template, likes: result.likes, isLiked: result.isLiked } : template));
+    };
+
     const handleDeletePrivateTemplate = async (id: string) => {
         const template = templates.find(item => item.id === id);
         if (!template || template.visibility !== "PRIVATE") return;
@@ -47,7 +54,7 @@ export default function TemplatesPanel() {
         <div className="space-y-6">
             <TemplatesFilter searchTerm={searchTerm} setSearchTerm={setSearchTerm} activeCategory={activeCategory} setActiveCategory={setActiveCategory} activeSource={activeSource} setActiveSource={setActiveSource} categories={categories} sourceCounts={sourceCounts} getTemplatesBySource={getTemplatesBySource} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
-                {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} views={template.views} downloads={template.downloads} likes={template.likes} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} onDelete={template.visibility === "PRIVATE" ? handleDeletePrivateTemplate : undefined} />)}
+                {filteredTemplates.map((template) => <ResumeCardWorkspace key={template.id} id={template.id} name={template.name} previewImage={template.previewImage} forks={template.forks} downloads={template.downloads} likes={template.likes} isLiked={template.isLiked} isSelected={(selectedResume?.id ?? "") === template.id} authorName={template.visibility === "COMMUNITY" ? template.authorId : undefined} onClick={handleSelectTemplate} onLike={handleToggleLike} onDelete={template.visibility === "PRIVATE" ? handleDeletePrivateTemplate : undefined} />)}
             </div>
         </div>
     );
