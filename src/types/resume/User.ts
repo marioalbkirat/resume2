@@ -1,5 +1,4 @@
 import { Draft } from "./Draft";
-import { PublishedResumeDB } from "./PublishedResume";
 import { ResumeTemplateDB } from "./ResumeTemplate";
 import { SectionDB } from "./Section";
 
@@ -11,7 +10,6 @@ export interface UserDB {
     createdAt: Date;
     updatedAt: Date;
     drafts?: Draft[];
-    publishedResume?: PublishedResumeDB[];
     resumeTemplates?: ResumeTemplateDB[];
     sections?: SectionDB[];
 }
